@@ -86,6 +86,22 @@ app.use('/', ucpRoutes);
 // Test UI Routes (POC)
 app.use('/test', testUiRoutes);
 
+// Checkout callback routes (for post-payment redirects)
+app.get('/checkout/pay/:checkoutId', (req, res) => {
+  const { checkoutId } = req.params;
+  res.redirect(`/test/order-complete?orderId=${checkoutId}`);
+});
+
+app.get('/checkout/thank-you', (req, res) => {
+  const orderId = req.query.orderId || req.query.checkoutId || 'unknown';
+  res.redirect(`/test/order-complete?orderId=${orderId}`);
+});
+
+app.get('/checkout/success', (req, res) => {
+  const orderId = req.query.orderId || req.query.checkoutId || 'unknown';
+  res.redirect(`/test/order-complete?orderId=${orderId}`);
+});
+
 // Error handling (must be last)
 app.use(notFoundHandler);
 app.use(errorHandler);
