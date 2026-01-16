@@ -76,6 +76,13 @@ router.get('/.well-known/ucp', (_req: Request, res: Response) => {
       shipping_policy_url: 'https://www.popstopdrink.com/shipping-policy',
       privacy_policy_url: 'https://www.popstopdrink.com/privacy-policy',
     },
+    // POC: US only for simplicity
+    supported_countries: ['US'],
+    shipping: {
+      countries: ['US'],
+      free_shipping_threshold: 0,  // Free shipping on all orders
+      default_rate: '0 USD',
+    },
   };
 
   res.json(discovery);

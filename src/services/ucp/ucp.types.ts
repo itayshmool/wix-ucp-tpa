@@ -17,6 +17,15 @@ export interface UCPDiscovery {
   endpoints: UCPEndpoints;
   payment_handlers: string[];
   trust_signals?: UCPTrustSignals;
+  // Geographic scope
+  supported_countries?: string[];
+  shipping?: UCPShipping;
+}
+
+export interface UCPShipping {
+  countries: string[];
+  free_shipping_threshold?: number;
+  default_rate?: string;
 }
 
 export interface UCPMerchant {
