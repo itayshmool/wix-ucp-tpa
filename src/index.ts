@@ -87,6 +87,12 @@ app.use('/', ucpRoutes);
 app.use('/test', testUiRoutes);
 
 // Checkout callback routes (for post-payment redirects)
+// Catch-all for any /checkout/* pattern
+app.get('/checkout/:id', (req, res) => {
+  const { id } = req.params;
+  res.redirect(`/test/order-complete?orderId=${id}`);
+});
+
 app.get('/checkout/pay/:checkoutId', (req, res) => {
   const { checkoutId } = req.params;
   res.redirect(`/test/order-complete?orderId=${checkoutId}`);
