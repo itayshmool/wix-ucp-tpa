@@ -18,6 +18,9 @@ const envSchema = z.object({
   WIX_API_KEY: z.string().optional(),
   WIX_ACCOUNT_ID: z.string().optional(),
   WIX_SITE_ID: z.string().optional(),
+  
+  // Redis (Optional - falls back to in-memory if not provided)
+  REDIS_URL: z.string().url().optional(),
 });
 
 function validateEnv() {

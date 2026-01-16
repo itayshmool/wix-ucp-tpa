@@ -6,7 +6,7 @@
 
 import { Router, Request, Response } from 'express';
 import { asyncHandler, AppError } from '../middleware/error-handler.js';
-import { instanceStore } from '../store/instances.js';
+import { instanceStore } from '../store/store.js';
 import { WixApiClient } from '../wix/client.js';
 import { OrdersService } from '../services/orders/orders.service.js';
 import { OrderStatus, PaymentStatus, CreateFulfillmentRequest } from '../services/types/order.types.js';
@@ -41,7 +41,7 @@ router.get(
     });
 
     // Get instance
-    const instance = instanceStore.get(instanceId);
+    const instance = await instanceStore.get(instanceId);
     if (!instance) {
       throw new AppError('Instance not found', 404);
     }
@@ -115,7 +115,7 @@ router.get(
     });
 
     // Get instance
-    const instance = instanceStore.get(instanceId);
+    const instance = await instanceStore.get(instanceId);
     if (!instance) {
       throw new AppError('Instance not found', 404);
     }
@@ -156,7 +156,7 @@ router.post(
     });
 
     // Get instance
-    const instance = instanceStore.get(instanceId);
+    const instance = await instanceStore.get(instanceId);
     if (!instance) {
       throw new AppError('Instance not found', 404);
     }
@@ -216,7 +216,7 @@ router.post(
     }
 
     // Get instance
-    const instance = instanceStore.get(instanceId);
+    const instance = await instanceStore.get(instanceId);
     if (!instance) {
       throw new AppError('Instance not found', 404);
     }
@@ -273,7 +273,7 @@ router.patch(
     });
 
     // Get instance
-    const instance = instanceStore.get(instanceId);
+    const instance = await instanceStore.get(instanceId);
     if (!instance) {
       throw new AppError('Instance not found', 404);
     }

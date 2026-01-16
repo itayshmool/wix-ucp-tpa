@@ -7,7 +7,7 @@
 
 import { Router, Request, Response } from 'express';
 import { asyncHandler, AppError } from '../middleware/error-handler.js';
-import { instanceStore } from '../store/instances.js';
+import { instanceStore } from '../store/store.js';
 import { CheckoutService } from '../services/checkout/checkout.service.js';
 import { CartService } from '../services/cart/cart.service.js';
 import { logger } from '../utils/logger.js';
@@ -17,9 +17,9 @@ const router = Router();
 /**
  * Middleware to check for instance and OAuth tokens
  */
-router.use('/:instanceId/*', (req: Request, _res: Response, next) => {
+router.use('/:instanceId/*', async (req: Request, _res: Response, next) => {
   const { instanceId } = req.params;
-  const instance = instanceStore.get(instanceId);
+    const instance = await instanceStore.get(instanceId);
 
   if (!instance) {
     logger.warn('Instance not found for checkout API access', { instanceId });

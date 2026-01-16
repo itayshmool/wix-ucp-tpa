@@ -15,7 +15,7 @@ import * as jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { config } from '../config/env.js';
 import { logger } from '../utils/logger.js';
-import { instanceStore } from '../store/instances.js';
+import { instanceStore } from '../store/store.js';
 import {
   WixTokenResponse,
   WixAuthRequest,
@@ -315,7 +315,7 @@ export async function handleOAuthCallback(
     }
 
     // Save instance to store
-    instanceStore.save(instanceId, {
+    await instanceStore.save(instanceId, {
       instanceId,
       accessToken: tokenResponse.access_token,
       refreshToken: tokenResponse.refresh_token,
@@ -344,7 +344,7 @@ export async function revokeAccess(instanceId: string): Promise<void> {
     logger.info('Revoking access for instance', { instanceId });
 
     // Remove from store
-    const deleted = instanceStore.delete(instanceId);
+    const deleted = await instanceStore.delete(instanceId);
 
     if (deleted) {
       logger.info('Successfully revoked access', { instanceId });

@@ -43,9 +43,9 @@ app.get('/health/ready', (_req, res) => {
 app.get('/', (_req, res) => {
   res.json({
     name: 'Wix UCP TPA',
-    version: '0.4.0',
+    version: '0.5.0',
     description: 'Wix Third-Party Application with UCP integration',
-    status: 'phase-3-complete',
+    status: 'phase-3-complete-with-redis',
     phase: 'Phase 3 Complete: Public Storefront Ready',
     endpoints: {
       health: '/health',

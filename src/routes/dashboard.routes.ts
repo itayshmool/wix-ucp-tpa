@@ -7,7 +7,7 @@
 
 import { Router, Request, Response } from 'express';
 import { asyncHandler, AppError } from '../middleware/error-handler.js';
-import { instanceStore } from '../store/instances.js';
+import { instanceStore } from '../store/store.js';
 import { decodeInstance } from '../wix/auth.js';
 import { WixApiClient } from '../wix/client.js';
 import { DecodedInstance, WixInstance } from '../wix/types.js';
@@ -49,7 +49,7 @@ router.get('/', asyncHandler(async (req: Request, res: Response): Promise<void> 
   }
 
   // Get or create instance data from store
-  let instance = instanceStore.get(decodedInstance.instanceId);
+  let instance = await instanceStore.get(decodedInstance.instanceId);
 
   if (!instance) {
     logger.info('Creating new instance from dashboard access', { 
@@ -67,7 +67,7 @@ router.get('/', asyncHandler(async (req: Request, res: Response): Promise<void> 
       siteId: decodedInstance.siteOwnerId || decodedInstance.instanceId,
     };
     
-    instanceStore.save(decodedInstance.instanceId, newInstance);
+    await instanceStore.save(decodedInstance.instanceId, newInstance);
     logger.info('Instance created successfully', { instanceId: newInstance.instanceId });
     
     instance = newInstance;
@@ -85,7 +85,7 @@ router.get('/', asyncHandler(async (req: Request, res: Response): Promise<void> 
 router.get(
   '/instances',
   asyncHandler(async (_req: Request, res: Response) => {
-    const instances = instanceStore.getAll();
+    const instances = await instanceStore.getAll();
 
     logger.debug('Listing all instances', { count: instances.length });
 
@@ -115,7 +115,7 @@ router.get(
   asyncHandler(async (req: Request, res: Response) => {
     const { instanceId } = req.params;
 
-    const instance = instanceStore.get(instanceId);
+    const instance = await instanceStore.get(instanceId);
 
     if (!instance) {
       res.status(404).json({
@@ -151,7 +151,7 @@ router.get(
 
     logger.debug('Status check requested', { instanceId });
 
-    const instance = instanceStore.get(instanceId);
+    const instance = await instanceStore.get(instanceId);
 
     if (!instance) {
       throw new AppError('Instance not found', 404);
@@ -183,7 +183,7 @@ router.post(
 
     logger.info('Testing connection', { instanceId });
 
-    const instance = instanceStore.get(instanceId);
+    const instance = await instanceStore.get(instanceId);
 
     if (!instance) {
       throw new AppError('Instance not found', 404);

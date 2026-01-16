@@ -5,7 +5,7 @@
  */
 
 import { logger } from '../utils/logger.js';
-import { instanceStore } from '../store/instances.js';
+import { instanceStore } from '../store/store.js';
 import { WixWebhookPayload, WixWebhookEventType } from './types.js';
 import { revokeAccess } from './auth.js';
 
@@ -18,7 +18,7 @@ async function handleAppInstalled(payload: WixWebhookPayload): Promise<void> {
   });
 
   // The instance should already be in the store from OAuth flow
-  const instance = instanceStore.get(payload.instanceId);
+  const instance = await instanceStore.get(payload.instanceId);
 
   if (!instance) {
     logger.warn('Instance not found for app.installed event', {
@@ -61,7 +61,7 @@ async function handleSitePublished(payload: WixWebhookPayload): Promise<void> {
     instanceId: payload.instanceId,
   });
 
-  const instance = instanceStore.get(payload.instanceId);
+  const instance = await instanceStore.get(payload.instanceId);
 
   if (!instance) {
     logger.warn('Instance not found for site.published event', {

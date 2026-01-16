@@ -111,6 +111,13 @@ class InstanceStore {
 }
 
 /**
- * Singleton instance store
+ * Singleton instance store (in-memory)
+ * Used as fallback when Redis is not available
  */
-export const instanceStore = new InstanceStore();
+const inMemoryStore = new InstanceStore();
+
+/**
+ * Instance store - either Redis or in-memory
+ * Import from redis-instances.ts for automatic selection
+ */
+export const instanceStore = inMemoryStore;
