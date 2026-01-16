@@ -293,6 +293,7 @@ function generateErrorPage(message: string): string {
 
 function generateDashboard(decodedInstance: DecodedInstance, instance: WixInstance, locale: string): string {
   const instanceId = decodedInstance.instanceId;
+  const hasOAuth = !!(instance.accessToken && instance.refreshToken);
   
   return `
     <!DOCTYPE html>
@@ -302,114 +303,445 @@ function generateDashboard(decodedInstance: DecodedInstance, instance: WixInstan
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>Store Agent - Dashboard</title>
       ${getStyles()}
+      ${getTestingStyles()}
     </head>
     <body>
       <div class="container">
         <h1>🏪 Store Agent Dashboard</h1>
-        <p class="subtitle">Phase 1.3 - Connection & Status</p>
+        <p class="subtitle">Phase 2 Complete - Full Store Integration</p>
         
-        <div class="status-card success">
-          <div class="status-icon">✅</div>
+        <div class="status-card ${hasOAuth ? 'success' : 'warning'}">
+          <div class="status-icon">${hasOAuth ? '✅' : '⚠️'}</div>
           <div class="status-content">
-            <h3>App Installed</h3>
-            <p>Your Wix store is connected to Store Agent</p>
+            <h3>OAuth Status: ${hasOAuth ? 'Connected' : 'Not Configured'}</h3>
+            <p>${hasOAuth ? 'Ready to test all APIs' : 'Complete OAuth flow to test APIs'}</p>
           </div>
         </div>
         
-        ${!instance.accessToken || !instance.refreshToken ? `
+        ${!hasOAuth ? `
         <div class="info warning">
-          <h3>ℹ️ OAuth Not Configured</h3>
-          <p>The app is installed, but OAuth tokens are not available yet.</p>
-          <p>For Phase 1.3 (Dashboard), this is expected. OAuth will be needed for API calls in later phases.</p>
+          <h3>🔑 OAuth Required for API Testing</h3>
+          <p>To test Phase 2 APIs, you need to complete the OAuth flow:</p>
+          <a href="/auth/install" class="btn btn-install" target="_blank">🚀 Complete OAuth Setup</a>
         </div>
         ` : ''}
         
-        <div class="info-grid">
-          <div class="info-item">
-            <label>Instance ID</label>
-            <code>${instanceId}</code>
+        <!-- Tabs -->
+        <div class="tabs">
+          <button class="tab-btn active" onclick="switchTab('overview')">📊 Overview</button>
+          <button class="tab-btn" onclick="switchTab('products')" ${!hasOAuth ? 'disabled' : ''}>📦 Products API</button>
+          <button class="tab-btn" onclick="switchTab('orders')" ${!hasOAuth ? 'disabled' : ''}>📋 Orders API</button>
+          <button class="tab-btn" onclick="switchTab('inventory')" ${!hasOAuth ? 'disabled' : ''}>📊 Inventory API</button>
+        </div>
+        
+        <!-- Overview Tab -->
+        <div id="overview-tab" class="tab-content active">
+          <div class="info-grid">
+            <div class="info-item">
+              <label>Instance ID</label>
+              <code>${instanceId}</code>
+            </div>
+            <div class="info-item">
+              <label>Site ID</label>
+              <code>${instance.siteId || 'N/A'}</code>
+            </div>
+            <div class="info-item">
+              <label>Installed</label>
+              <span>${new Date(instance.installedAt).toLocaleString()}</span>
+            </div>
+            <div class="info-item">
+              <label>Permissions</label>
+              <span>${decodedInstance.permissions || 'Standard'}</span>
+            </div>
           </div>
-          <div class="info-item">
-            <label>Site ID</label>
-            <code>${instance.siteId || 'N/A'}</code>
-          </div>
-          <div class="info-item">
-            <label>Installed</label>
-            <span>${new Date(instance.installedAt).toLocaleString()}</span>
-          </div>
-          <div class="info-item">
-            <label>Permissions</label>
-            <span>${decodedInstance.permissions || 'Standard'}</span>
-          </div>
-          <div class="info-item">
-            <label>OAuth Status</label>
-            <span>${instance.accessToken ? '✅ Configured' : '⚠️ Not configured'}</span>
+          
+          <div class="info">
+            <h3>✅ Available APIs</h3>
+            <ul>
+              <li><strong>Products API:</strong> List, search, filter products and collections</li>
+              <li><strong>Orders API:</strong> View orders, create fulfillments, manage tracking</li>
+              <li><strong>Inventory API:</strong> Track stock, low stock alerts, bulk updates</li>
+            </ul>
           </div>
         </div>
         
-        <div class="actions">
-          <button id="testConnectionBtn" class="btn btn-primary">
-            🔌 Test Connection
-          </button>
-          <button id="viewInstancesBtn" class="btn btn-secondary" onclick="window.open('/dashboard/instances', '_blank')">
-            📋 View All Instances
-          </button>
+        <!-- Products Tab -->
+        <div id="products-tab" class="tab-content">
+          <h2>📦 Products API Testing</h2>
+          
+          <div class="test-section">
+            <h3>List Products</h3>
+            <div class="test-controls">
+              <label>Limit: <input type="number" id="products-limit" value="5" min="1" max="100"></label>
+              <label>Search: <input type="text" id="products-search" placeholder="Optional search term"></label>
+              <button onclick="testListProducts()" class="btn btn-primary">🔍 List Products</button>
+            </div>
+          </div>
+          
+          <div class="test-section">
+            <h3>Get Single Product</h3>
+            <div class="test-controls">
+              <label>Product ID: <input type="text" id="product-id" placeholder="Enter product ID"></label>
+              <button onclick="testGetProduct()" class="btn btn-primary">🔍 Get Product</button>
+            </div>
+          </div>
+          
+          <div class="test-section">
+            <h3>List Collections</h3>
+            <div class="test-controls">
+              <button onclick="testListCollections()" class="btn btn-primary">🔍 List Collections</button>
+            </div>
+          </div>
         </div>
         
+        <!-- Orders Tab -->
+        <div id="orders-tab" class="tab-content">
+          <h2>📋 Orders API Testing</h2>
+          
+          <div class="test-section">
+            <h3>List Orders</h3>
+            <div class="test-controls">
+              <label>Limit: <input type="number" id="orders-limit" value="10" min="1" max="100"></label>
+              <label>Status: 
+                <select id="orders-status">
+                  <option value="">All</option>
+                  <option value="APPROVED">Approved</option>
+                  <option value="FULFILLED">Fulfilled</option>
+                  <option value="CANCELED">Canceled</option>
+                </select>
+              </label>
+              <button onclick="testListOrders()" class="btn btn-primary">🔍 List Orders</button>
+            </div>
+          </div>
+          
+          <div class="test-section">
+            <h3>Get Single Order</h3>
+            <div class="test-controls">
+              <label>Order ID: <input type="text" id="order-id" placeholder="Enter order ID"></label>
+              <button onclick="testGetOrder()" class="btn btn-primary">🔍 Get Order</button>
+            </div>
+          </div>
+          
+          <div class="test-section">
+            <h3>Search Orders</h3>
+            <div class="test-controls">
+              <label>Search: <input type="text" id="orders-search" placeholder="Email or order number"></label>
+              <button onclick="testSearchOrders()" class="btn btn-primary">🔍 Search Orders</button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Inventory Tab -->
+        <div id="inventory-tab" class="tab-content">
+          <h2>📊 Inventory API Testing</h2>
+          
+          <div class="test-section">
+            <h3>List Inventory</h3>
+            <div class="test-controls">
+              <label>Limit: <input type="number" id="inventory-limit" value="10" min="1" max="100"></label>
+              <label>In Stock Only: <input type="checkbox" id="inventory-instock"></label>
+              <button onclick="testListInventory()" class="btn btn-primary">🔍 List Inventory</button>
+            </div>
+          </div>
+          
+          <div class="test-section">
+            <h3>Low Stock Alert</h3>
+            <div class="test-controls">
+              <label>Threshold: <input type="number" id="lowstock-threshold" value="10" min="1"></label>
+              <button onclick="testLowStock()" class="btn btn-primary">⚠️ Check Low Stock</button>
+            </div>
+          </div>
+          
+          <div class="test-section">
+            <h3>Get Product Inventory</h3>
+            <div class="test-controls">
+              <label>Product ID: <input type="text" id="inv-product-id" placeholder="Enter product ID"></label>
+              <button onclick="testGetProductInventory()" class="btn btn-primary">🔍 Get Inventory</button>
+            </div>
+          </div>
+          
+          <div class="test-section">
+            <h3>Export Inventory</h3>
+            <div class="test-controls">
+              <button onclick="testExportInventory()" class="btn btn-primary">📤 Export Inventory</button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Results Display -->
         <div id="results" class="results" style="display: none;">
-          <h3>Connection Test Results</h3>
+          <div class="results-header">
+            <h3>📋 API Response</h3>
+            <button onclick="clearResults()" class="btn btn-sm">Clear</button>
+          </div>
           <pre id="resultsContent"></pre>
-        </div>
-        
-        <div class="info">
-          <h3>📚 Next Steps (Phase 2+)</h3>
-          <ul>
-            <li><strong>Phase 2:</strong> Product catalog integration</li>
-            <li><strong>Phase 3:</strong> Hosted checkout & cart management</li>
-            <li><strong>Phase 4-6:</strong> UCP layer for AI commerce</li>
-          </ul>
         </div>
       </div>
       
-      <script>
-        const instanceId = '${instanceId}';
-        
-        document.getElementById('testConnectionBtn').addEventListener('click', async () => {
-          const btn = document.getElementById('testConnectionBtn');
-          const results = document.getElementById('results');
-          const resultsContent = document.getElementById('resultsContent');
-          
-          btn.disabled = true;
-          btn.textContent = '⏳ Testing...';
-          results.style.display = 'block';
-          resultsContent.textContent = 'Connecting to Wix API...';
-          
-          try {
-            const response = await fetch('/dashboard/api/test-connection/' + instanceId, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' }
-            });
-            
-            const data = await response.json();
-            
-            if (data.success) {
-              resultsContent.textContent = '✅ Success!\\n\\n' + JSON.stringify(data, null, 2);
-              resultsContent.style.color = '#28a745';
-            } else {
-              resultsContent.textContent = '❌ Failed:\\n\\n' + JSON.stringify(data, null, 2);
-              resultsContent.style.color = '#dc3545';
-            }
-          } catch (error) {
-            resultsContent.textContent = '❌ Error: ' + error.message;
-            resultsContent.style.color = '#dc3545';
-          } finally {
-            btn.disabled = false;
-            btn.textContent = '🔌 Test Connection';
-          }
-        });
-      </script>
+      ${getTestingScript(instanceId, hasOAuth)}
     </body>
     </html>
+  `;
+}
+
+function getTestingStyles(): string {
+  return `
+    <style>
+      .tabs {
+        display: flex;
+        gap: 5px;
+        margin: 20px 0;
+        border-bottom: 2px solid #e9ecef;
+      }
+      
+      .tab-btn {
+        padding: 12px 20px;
+        border: none;
+        background: none;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        color: #6c757d;
+        border-bottom: 3px solid transparent;
+        transition: all 0.2s;
+      }
+      
+      .tab-btn:hover:not(:disabled) {
+        color: #0c6efd;
+        background: #f8f9fa;
+      }
+      
+      .tab-btn.active {
+        color: #0c6efd;
+        border-bottom-color: #0c6efd;
+      }
+      
+      .tab-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      
+      .tab-content {
+        display: none;
+        animation: fadeIn 0.3s;
+      }
+      
+      .tab-content.active {
+        display: block;
+      }
+      
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+      
+      .test-section {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 15px;
+      }
+      
+      .test-section h3 {
+        margin: 0 0 15px 0;
+        color: #495057;
+        font-size: 16px;
+      }
+      
+      .test-controls {
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      
+      .test-controls label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        color: #495057;
+      }
+      
+      .test-controls input[type="text"],
+      .test-controls input[type="number"],
+      .test-controls select {
+        padding: 8px 12px;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        font-size: 14px;
+        min-width: 150px;
+      }
+      
+      .test-controls input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+      }
+      
+      .results-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+      
+      .results-header h3 {
+        margin: 0;
+      }
+      
+      .btn-sm {
+        padding: 6px 12px;
+        font-size: 12px;
+      }
+      
+      .btn-install {
+        display: inline-block;
+        margin-top: 10px;
+        background: #28a745;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 5px;
+        text-decoration: none;
+        font-weight: 500;
+      }
+      
+      .btn-install:hover {
+        background: #218838;
+      }
+    </style>
+  `;
+}
+
+function getTestingScript(instanceId: string, hasOAuth: boolean): string {
+  return `
+    <script>
+      const instanceId = '${instanceId}';
+      const hasOAuth = ${hasOAuth};
+      
+      // Tab switching
+      function switchTab(tabName) {
+        // Update tab buttons
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        event.target.classList.add('active');
+        
+        // Update tab content
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+        document.getElementById(tabName + '-tab').classList.add('active');
+      }
+      
+      // Helper function to make API calls
+      async function callAPI(endpoint, options = {}) {
+        const results = document.getElementById('results');
+        const resultsContent = document.getElementById('resultsContent');
+        
+        results.style.display = 'block';
+        resultsContent.textContent = '⏳ Loading...';
+        resultsContent.style.color = '#6c757d';
+        
+        try {
+          const response = await fetch(endpoint, {
+            method: options.method || 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              ...options.headers
+            },
+            body: options.body ? JSON.stringify(options.body) : undefined
+          });
+          
+          const data = await response.json();
+          
+          resultsContent.textContent = JSON.stringify(data, null, 2);
+          resultsContent.style.color = data.success ? '#28a745' : '#dc3545';
+          
+          // Scroll to results
+          results.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        } catch (error) {
+          resultsContent.textContent = '❌ Error: ' + error.message;
+          resultsContent.style.color = '#dc3545';
+        }
+      }
+      
+      function clearResults() {
+        document.getElementById('results').style.display = 'none';
+      }
+      
+      // Products API
+      function testListProducts() {
+        const limit = document.getElementById('products-limit').value;
+        const search = document.getElementById('products-search').value;
+        let url = \`/api/\${instanceId}/products?limit=\${limit}\`;
+        if (search) url += \`&search=\${encodeURIComponent(search)}\`;
+        callAPI(url);
+      }
+      
+      function testGetProduct() {
+        const productId = document.getElementById('product-id').value;
+        if (!productId) {
+          alert('Please enter a product ID');
+          return;
+        }
+        callAPI(\`/api/\${instanceId}/products/\${productId}\`);
+      }
+      
+      function testListCollections() {
+        callAPI(\`/api/\${instanceId}/collections\`);
+      }
+      
+      // Orders API
+      function testListOrders() {
+        const limit = document.getElementById('orders-limit').value;
+        const status = document.getElementById('orders-status').value;
+        let url = \`/api/\${instanceId}/orders?limit=\${limit}\`;
+        if (status) url += \`&status=\${status}\`;
+        callAPI(url);
+      }
+      
+      function testGetOrder() {
+        const orderId = document.getElementById('order-id').value;
+        if (!orderId) {
+          alert('Please enter an order ID');
+          return;
+        }
+        callAPI(\`/api/\${instanceId}/orders/\${orderId}\`);
+      }
+      
+      function testSearchOrders() {
+        const search = document.getElementById('orders-search').value;
+        if (!search) {
+          alert('Please enter a search term');
+          return;
+        }
+        callAPI(\`/api/\${instanceId}/orders?search=\${encodeURIComponent(search)}\`);
+      }
+      
+      // Inventory API
+      function testListInventory() {
+        const limit = document.getElementById('inventory-limit').value;
+        const inStock = document.getElementById('inventory-instock').checked;
+        let url = \`/api/\${instanceId}/inventory?limit=\${limit}\`;
+        if (inStock) url += '&inStock=true';
+        callAPI(url);
+      }
+      
+      function testLowStock() {
+        const threshold = document.getElementById('lowstock-threshold').value;
+        callAPI(\`/api/\${instanceId}/inventory/low-stock?threshold=\${threshold}\`);
+      }
+      
+      function testGetProductInventory() {
+        const productId = document.getElementById('inv-product-id').value;
+        if (!productId) {
+          alert('Please enter a product ID');
+          return;
+        }
+        callAPI(\`/api/\${instanceId}/inventory/products/\${productId}\`);
+      }
+      
+      function testExportInventory() {
+        callAPI(\`/api/\${instanceId}/inventory/export\`);
+      }
+    </script>
   `;
 }
 
