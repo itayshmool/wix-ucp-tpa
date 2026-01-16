@@ -51,7 +51,7 @@ router.get('/.well-known/ucp', (_req: Request, res: Response) => {
     protocol: 'ucp',
     version: '1.0',
     merchant: {
-      id: 'popstopdrink',
+      id: '5713796246',  // Google Merchant Center ID
       name: 'Pop Stop Drink',
       domain: 'popstopdrink.com',
       description: 'Premium beverages and drinks',
