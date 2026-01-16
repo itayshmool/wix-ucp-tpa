@@ -11,7 +11,7 @@
  */
 
 import axios from 'axios';
-import jwt from 'jsonwebtoken';
+import * as jwt from 'jsonwebtoken';
 import { config } from '../config/env.js';
 import { logger } from '../utils/logger.js';
 import { instanceStore } from '../store/instances.js';
