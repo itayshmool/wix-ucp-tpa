@@ -1,0 +1,161 @@
+/**
+ * Wix TPA Types and Interfaces
+ * 
+ * Defines TypeScript types for Wix API interactions, OAuth flow, and webhooks.
+ */
+
+// ============================================================================
+// App Instance Types
+// ============================================================================
+
+/**
+ * Represents a Wix app installation instance
+ */
+export interface WixInstance {
+  instanceId: string;
+  accessToken: string;
+  refreshToken: string;
+  installedAt: Date;
+  siteId?: string;
+  metaSiteId?: string;
+}
+
+/**
+ * OAuth token response from Wix
+ */
+export interface WixTokenResponse {
+  access_token: string;
+  refresh_token: string;
+  expires_in: number;
+  token_type: string;
+}
+
+/**
+ * OAuth authorization request parameters
+ */
+export interface WixAuthRequest {
+  code: string;
+  state?: string;
+  instanceId?: string;
+}
+
+// ============================================================================
+// Webhook Types
+// ============================================================================
+
+/**
+ * Wix webhook payload structure
+ */
+export interface WixWebhookPayload {
+  instanceId: string;
+  eventType: WixWebhookEventType;
+  data: unknown;
+  timestamp: string;
+}
+
+/**
+ * Supported Wix webhook event types
+ */
+export enum WixWebhookEventType {
+  APP_INSTALLED = 'app.installed',
+  APP_REMOVED = 'app.removed',
+  SITE_PUBLISHED = 'site.published',
+  SITE_UNPUBLISHED = 'site.unpublished',
+  // Add more event types as needed
+}
+
+/**
+ * Webhook signature validation result
+ */
+export interface WebhookValidationResult {
+  isValid: boolean;
+  instanceId?: string;
+  error?: string;
+}
+
+// ============================================================================
+// API Client Types
+// ============================================================================
+
+/**
+ * Wix API request options
+ */
+export interface WixApiRequestOptions {
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+  path: string;
+  data?: unknown;
+  headers?: Record<string, string>;
+}
+
+/**
+ * Wix API error response
+ */
+export interface WixApiError {
+  message: string;
+  code?: string;
+  details?: unknown;
+}
+
+// ============================================================================
+// Site Information Types
+// ============================================================================
+
+/**
+ * Wix site information
+ */
+export interface WixSite {
+  siteId: string;
+  metaSiteId: string;
+  displayName: string;
+  url?: string;
+  locale?: string;
+  currency?: string;
+}
+
+// ============================================================================
+// Merchant/Store Types (for later phases)
+// ============================================================================
+
+/**
+ * Basic merchant information
+ */
+export interface WixMerchant {
+  instanceId: string;
+  siteId: string;
+  businessName?: string;
+  email?: string;
+  connectedAt: Date;
+  isActive: boolean;
+}
+
+// ============================================================================
+// Type Guards
+// ============================================================================
+
+/**
+ * Type guard for WixWebhookPayload
+ */
+export function isWixWebhookPayload(obj: unknown): obj is WixWebhookPayload {
+  if (!obj || typeof obj !== 'object') return false;
+  const payload = obj as Record<string, unknown>;
+  return (
+    typeof payload.instanceId === 'string' &&
+    typeof payload.eventType === 'string' &&
+    'data' in payload &&
+    typeof payload.timestamp === 'string'
+  );
+}
+
+/**
+ * Type guard for WixTokenResponse
+ */
+export function isWixTokenResponse(obj: unknown): obj is WixTokenResponse {
+  if (!obj || typeof obj !== 'object') return false;
+  const response = obj as Record<string, unknown>;
+  return (
+    typeof response.access_token === 'string' &&
+    typeof response.refresh_token === 'string' &&
+    typeof response.expires_in === 'number' &&
+    typeof response.token_type === 'string'
+  );
+}

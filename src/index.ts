@@ -1,10 +1,18 @@
 import express from 'express';
 import { config } from './config/env.js';
 import { logger } from './utils/logger.js';
+import { errorHandler, notFoundHandler } from './middleware/error-handler.js';
+import { preserveRawBody } from './middleware/validate-webhook.js';
+import authRoutes from './routes/auth.routes.js';
+import webhookRoutes from './routes/webhook.routes.js';
+import dashboardRoutes from './routes/dashboard.routes.js';
 
 const app = express();
 
 // Middleware
+// Preserve raw body for webhook signature validation
+app.use('/webhooks', express.json({ verify: preserveRawBody }));
+// Regular JSON parsing for other routes
 app.use(express.json());
 
 // Health check endpoints for Render.com
@@ -29,38 +37,30 @@ app.get('/health/ready', (_req, res) => {
 app.get('/', (_req, res) => {
   res.json({
     name: 'Wix UCP TPA',
-    version: '0.1.0',
+    version: '0.1.1',
     description: 'Wix Third-Party Application with UCP integration',
-    status: 'bootstrap',
+    status: 'phase-1.1',
+    phase: 'OAuth & Webhooks Enabled',
     endpoints: {
       health: '/health',
       liveness: '/health/live',
       readiness: '/health/ready',
+      install: '/auth/install',
+      authCallback: '/auth/callback',
+      webhooks: '/webhooks',
+      dashboard: '/dashboard',
     },
   });
 });
 
-// 404 handler
-app.use((req, res) => {
-  res.status(404).json({
-    error: 'Not Found',
-    path: req.path,
-  });
-});
+// Application routes
+app.use('/auth', authRoutes);
+app.use('/webhooks', webhookRoutes);
+app.use('/dashboard', dashboardRoutes);
 
-// Error handler
-app.use((err: Error, req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  logger.error('Unhandled error', {
-    error: err.message,
-    stack: config.NODE_ENV === 'development' ? err.stack : undefined,
-    path: req.path,
-  });
-  
-  res.status(500).json({
-    error: 'Internal Server Error',
-    message: config.NODE_ENV === 'development' ? err.message : undefined,
-  });
-});
+// Error handling (must be last)
+app.use(notFoundHandler);
+app.use(errorHandler);
 
 // Start server
 const server = app.listen(config.PORT, () => {

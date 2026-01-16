@@ -1,6 +1,6 @@
 {
   "name": "wix-ucp-tpa",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Wix TPA with UCP integration for AI-powered commerce",
   "main": "dist/index.js",
   "type": "module",
@@ -14,18 +14,29 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext .ts"
   },
-  "keywords": ["wix", "tpa", "ucp", "commerce", "ai"],
+  "keywords": [
+    "wix",
+    "tpa",
+    "ucp",
+    "commerce",
+    "ai"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "express": "^4.18.2",
-    "zod": "^3.22.4",
-    "dotenv": "^16.3.1",
     "@types/express": "^4.17.21",
     "@types/node": "^20.10.6",
-    "typescript": "^5.3.3"
+    "axios": "^1.13.2",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.3",
+    "typescript": "^5.3.3",
+    "uuid": "^13.0.0",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/uuid": "^10.0.0",
     "tsx": "^4.7.0"
   }
 }
