@@ -42,24 +42,39 @@ function sendError(res: Response, status: number, message: string, code?: string
  * GET /.well-known/ucp
  * 
  * Returns information about this UCP-enabled store
+ * Follows official UCP specification from ucp.dev
  */
 router.get('/.well-known/ucp', (_req: Request, res: Response) => {
+  const baseUrl = config.BASE_URL || 'https://wix-ucp-tpa.onrender.com';
+  
   const discovery: UCPDiscovery = {
     protocol: 'ucp',
-    version: '1.0.0-sdk',
-    store: {
-      id: config.HEADLESS_CLIENT_ID || 'poc-store',
-      name: 'Wix POC Store',
-      url: config.BASE_URL || 'https://wix-ucp-tpa.onrender.com',
+    version: '1.0',
+    merchant: {
+      id: 'popstopdrink',
+      name: 'Pop Stop Drink',
+      domain: 'popstopdrink.com',
+      description: 'Premium beverages and drinks',
+      logo: 'https://static.wixstatic.com/media/11062b_723b720fab234a8f984ea3956739a9ab~mv2.jpg',
       currency: 'USD',
-      categories: ['general'],
+      verified: true,
     },
-    capabilities: ['browse', 'search', 'cart', 'checkout'],
+    capabilities: ['catalog_search', 'product_details', 'cart_management', 'checkout'],
     endpoints: {
-      products: '/ucp/products',
-      cart: '/ucp/cart',
-      checkout: '/ucp/checkout',
-      orders: '/ucp/orders',
+      catalog: `${baseUrl}/ucp/products`,
+      product: `${baseUrl}/ucp/products/{id}`,
+      cart: `${baseUrl}/ucp/cart`,
+      checkout: `${baseUrl}/ucp/checkout`,
+      orders: `${baseUrl}/ucp/orders/{id}`,
+    },
+    payment_handlers: [
+      'com.wix.checkout.v1',  // Wix Hosted Checkout
+    ],
+    trust_signals: {
+      ssl: true,
+      return_policy_url: 'https://www.popstopdrink.com/return-policy',
+      shipping_policy_url: 'https://www.popstopdrink.com/shipping-policy',
+      privacy_policy_url: 'https://www.popstopdrink.com/privacy-policy',
     },
   };
 

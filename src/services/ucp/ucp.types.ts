@@ -6,16 +6,56 @@
  */
 
 /**
- * UCP Store Discovery Response
+ * UCP Store Discovery Response (Official Spec Compliant)
+ * Based on ucp.dev specification
  */
 export interface UCPDiscovery {
   protocol: 'ucp';
   version: string;
-  store: UCPStore;
+  merchant: UCPMerchant;
   capabilities: UCPCapability[];
   endpoints: UCPEndpoints;
+  payment_handlers: string[];
+  trust_signals?: UCPTrustSignals;
 }
 
+export interface UCPMerchant {
+  id: string;
+  name: string;
+  domain: string;
+  description?: string;
+  logo?: string;
+  currency: string;
+  verified?: boolean;
+}
+
+export type UCPCapability = 
+  | 'catalog_search' 
+  | 'product_details' 
+  | 'cart_management' 
+  | 'checkout'
+  | 'orders'
+  // Legacy aliases for backward compatibility
+  | 'browse' 
+  | 'search' 
+  | 'cart';
+
+export interface UCPEndpoints {
+  catalog: string;
+  product: string;
+  cart: string;
+  checkout: string;
+  orders?: string;
+}
+
+export interface UCPTrustSignals {
+  ssl: boolean;
+  return_policy_url?: string;
+  shipping_policy_url?: string;
+  privacy_policy_url?: string;
+}
+
+// Keep old interface for backward compatibility
 export interface UCPStore {
   id: string;
   name: string;
@@ -23,15 +63,6 @@ export interface UCPStore {
   url: string;
   currency: string;
   categories?: string[];
-}
-
-export type UCPCapability = 'browse' | 'search' | 'cart' | 'checkout' | 'orders';
-
-export interface UCPEndpoints {
-  products: string;
-  cart: string;
-  checkout: string;
-  orders: string;
 }
 
 /**
