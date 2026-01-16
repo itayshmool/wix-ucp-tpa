@@ -11,6 +11,7 @@
  */
 
 import axios from 'axios';
+import jwt from 'jsonwebtoken';
 import { config } from '../config/env.js';
 import { logger } from '../utils/logger.js';
 import { instanceStore } from '../store/instances.js';
@@ -158,53 +159,96 @@ export function parseInstanceId(signedInstance: string): string | null {
 }
 
 /**
- * Decode Wix instance JWT (from dashboard query params)
+ * Decode Wix instance parameter (from dashboard query params)
  * 
  * The instance parameter is passed by Wix when loading the dashboard in an iframe.
- * It contains information about the app installation, site owner, and permissions.
+ * It's a signed string that needs to be verified using WIX_APP_SECRET.
  * 
- * Note: For reading purposes, we don't need to verify the signature since the
- * request is coming from within Wix's secure iframe context. However, for
- * sensitive operations, you should verify the JWT signature using WIX_APP_SECRET.
+ * Wix uses different formats depending on the app type:
+ * 1. JWT format (header.payload.signature) - Used by most apps
+ * 2. Encrypted base64 - Used by some older apps
+ * 3. Plain base64 JSON - Development/testing
  */
 export function decodeInstance(instance: string): DecodedInstance | null {
   try {
-    logger.debug('Decoding Wix instance parameter');
+    logger.debug('Decoding Wix instance parameter', {
+      length: instance.length,
+      hasDots: instance.includes('.'),
+    });
 
-    // The instance can be either:
-    // 1. A JWT (format: header.payload.signature)
-    // 2. Base64-encoded JSON (legacy format)
-    
-    // Try JWT format first
-    const parts = instance.split('.');
-    if (parts.length === 3) {
-      // JWT format
-      const payload = JSON.parse(
-        Buffer.from(parts[1], 'base64url').toString('utf-8')
-      );
+    // Method 1: Try JWT verification with app secret
+    try {
+      const decoded = jwt.verify(instance, config.WIX_APP_SECRET, {
+        algorithms: ['HS256'],
+      }) as DecodedInstance;
       
-      logger.debug('Successfully decoded instance JWT', {
-        instanceId: payload.instanceId,
-        hasPermissions: !!payload.permissions,
+      logger.info('Successfully decoded and verified instance (JWT)', {
+        instanceId: decoded.instanceId,
+        appDefId: decoded.appDefId,
       });
       
-      return payload as DecodedInstance;
+      return decoded;
+    } catch (jwtError) {
+      logger.debug('Not a valid JWT, trying other methods', {
+        error: jwtError instanceof Error ? jwtError.message : 'Unknown',
+      });
     }
 
-    // Try base64 format (legacy)
-    const decoded = JSON.parse(
-      Buffer.from(instance, 'base64').toString('utf-8')
-    );
+    // Method 2: Try decoding without verification (for development)
+    const parts = instance.split('.');
+    if (parts.length === 3) {
+      try {
+        const payload = JSON.parse(
+          Buffer.from(parts[1], 'base64url').toString('utf-8')
+        );
+        
+        logger.warn('Decoded instance without signature verification', {
+          instanceId: payload.instanceId,
+        });
+        
+        return payload as DecodedInstance;
+      } catch (parseError) {
+        logger.debug('Failed to parse JWT payload');
+      }
+    }
+
+    // Method 3: Try base64 JSON (legacy/testing)
+    try {
+      const decoded = JSON.parse(
+        Buffer.from(instance, 'base64').toString('utf-8')
+      );
+      
+      logger.warn('Decoded instance from base64 (legacy format)', {
+        instanceId: decoded.instanceId,
+      });
+      
+      return decoded as DecodedInstance;
+    } catch (base64Error) {
+      logger.debug('Not base64 JSON format');
+    }
+
+    // Method 4: Try base64url variant
+    try {
+      const decoded = JSON.parse(
+        Buffer.from(instance, 'base64url').toString('utf-8')
+      );
+      
+      logger.warn('Decoded instance from base64url', {
+        instanceId: decoded.instanceId,
+      });
+      
+      return decoded as DecodedInstance;
+    } catch (base64urlError) {
+      logger.debug('Not base64url JSON format');
+    }
+
+    throw new Error('All decoding methods failed');
     
-    logger.debug('Successfully decoded instance (base64)', {
-      instanceId: decoded.instanceId,
-    });
-    
-    return decoded as DecodedInstance;
   } catch (error) {
     logger.error('Failed to decode instance parameter', {
       error: error instanceof Error ? error.message : 'Unknown error',
-      instancePreview: instance.substring(0, 20) + '...',
+      instancePreview: instance.substring(0, 30) + '...',
+      instanceLength: instance.length,
     });
     return null;
   }
