@@ -71,19 +71,28 @@ When a user wants to shop:
    - The URL will point to the Wix payment page (e.g., popstopdrink.com)
    - The user MUST go to that exact URL to complete payment
 
-⚠️ You MUST actually call the API! Do NOT copy example URLs from this documentation!
+⚠️ CRITICAL: How to handle checkout URLs correctly
 
 Steps:
 1. Call: POST https://wix-ucp-tpa.onrender.com/ucp/checkout with body {}
 2. Read the "checkoutUrl" field from the JSON response
-3. Give that EXACT URL to the user
+3. Output the URL EXACTLY as received - do NOT modify it!
 
-The checkoutUrl will look like: https://www.popstopdrink.com/checkout?checkoutId=REAL_ID_HERE&currency=USD
-(where REAL_ID_HERE is a long alphanumeric ID like "2f4f2c0c-c0e0-4d7a-8e90-a1b2c3d4e5f6")
+IMPORTANT URL OUTPUT RULES:
+- Output the URL as plain text on its own line
+- Do NOT URL-encode the URL (don't convert ? to %3F or & to %26)
+- Do NOT wrap it in markdown or formatting that breaks the URL
+- The user should be able to copy-paste this URL directly into their browser
 
-❌ NEVER use "abc123" or any example ID - those are fake!
-❌ NEVER make up a checkout URL
-✅ ALWAYS call POST /ucp/checkout first, then use the checkoutUrl from the response
+Example correct output:
+"Here's your checkout link - copy and paste this into your browser:
+
+https://www.popstopdrink.com/checkout?checkoutId=43153306-d951-4d8e-b0e1-85d27a961a07&currency=USD"
+
+❌ WRONG: URL-encoded like checkout%3FcheckoutId%3D...
+❌ WRONG: Made up IDs like abc123 or 3a1b2c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d
+❌ WRONG: Links to wix-ucp-tpa.onrender.com/checkout/...
+✅ RIGHT: Exact URL from API response with real checkout ID
 
 Always confirm actions with the user before proceeding.
 ```
@@ -167,11 +176,14 @@ User: "Add cone crusher to my cart"
 
 User: "Checkout please"
   → LLM calls: POST https://wix-ucp-tpa.onrender.com/ucp/checkout with body: {}
-  → API returns: { "checkoutUrl": "https://www.popstopdrink.com/checkout?checkoutId=REAL_LONG_ID&currency=USD" }
-  → LLM gives user the EXACT checkoutUrl from the response
+  → API returns: { "checkoutUrl": "https://www.popstopdrink.com/checkout?checkoutId=43153306-d951-4d8e-b0e1-85d27a961a07&currency=USD" }
+  → LLM outputs:
+    "Here's your checkout link - copy and paste this into your browser:
+    
+    https://www.popstopdrink.com/checkout?checkoutId=43153306-d951-4d8e-b0e1-85d27a961a07&currency=USD"
   
-  ⚠️ The checkoutUrl contains a REAL checkout ID (long alphanumeric string)
-  ⚠️ You MUST call the API - do NOT use example URLs from this documentation!
+  ⚠️ Output URL as plain text - user will copy-paste into browser
+  ⚠️ Real checkout IDs are long like: 43153306-d951-4d8e-b0e1-85d27a961a07
 ```
 
 ---
