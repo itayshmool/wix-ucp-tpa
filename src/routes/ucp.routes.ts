@@ -173,18 +173,27 @@ router.post('/ucp/cart', async (req: Request, res: Response) => {
 
     const client = await getPocClient();
 
-    // Convert UCP items to Wix format
-    const lineItems = items.map(item => ucpCartItemToWix(item));
+    // Step 1: Create empty cart
+    const createResponse = await client.post('/ecom/v1/carts', {});
+    const emptyCart = (createResponse as any).cart || createResponse;
+    const cartId = emptyCart.id || emptyCart._id;
 
-    const response = await client.post('/ecom/v1/carts', {
+    logger.info('UCP: Empty cart created', { cartId });
+
+    // Step 2: Add items to cart
+    const lineItems = items.map(item => ucpCartItemToWix(item));
+    const addResponse = await client.post(`/ecom/v1/carts/${cartId}/addToCart`, {
       lineItems,
     });
 
-    const cart = wixCartToUCP((response as any).cart || response);
+    const cart = wixCartToUCP((addResponse as any).cart || addResponse);
     res.status(201).json(cart);
-  } catch (error) {
-    logger.error('UCP: Failed to create cart', { error });
-    sendError(res, 500, 'Failed to create cart', 'CART_ERROR');
+  } catch (error: any) {
+    logger.error('UCP: Failed to create cart', { 
+      error: error.message || error,
+      details: error.details,
+    });
+    sendError(res, 500, error.message || 'Failed to create cart', 'CART_ERROR');
   }
 });
 
