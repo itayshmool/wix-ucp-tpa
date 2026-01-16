@@ -5,6 +5,40 @@
 
 ---
 
+## 🚨 MULTI-TENANT ONLY - NEVER FORGET THIS!
+
+**USER REQUIREMENT**: This app MUST be **multi-tenant ONLY**.
+
+### What This Means:
+- ✅ **Multiple merchants** can install this app
+- ✅ Each merchant gets their **own instance ID**
+- ✅ Each instance is **isolated** from others
+- ✅ Buyers interact via `/api/:instanceId/*` endpoints
+- ✅ One deployment serves **unlimited merchants**
+
+### What to NEVER Suggest:
+- ❌ **NEVER** suggest single-tenant solutions
+- ❌ **NEVER** suggest API Keys as primary auth
+- ❌ **NEVER** suggest "just configure for one store"
+- ❌ **NEVER** say "use API Keys instead of OAuth"
+
+### If Auth Doesn't Work:
+- ✅ Fix the multi-tenant OAuth approach
+- ✅ Use instance-based authentication (dashboard apps)
+- ✅ Find multi-tenant solutions
+- ❌ DON'T suggest single-tenant workarounds
+
+### The Truth About Dashboard Apps:
+**Dashboard apps ARE multi-tenant!** Each merchant who installs the app:
+1. Gets a unique `instanceId` from Wix
+2. The instance parameter contains auth context
+3. APIs use `/api/:instanceId/*` for isolation
+4. No OAuth redirect URL needed - instance IS the auth!
+
+**This is WORKING and IS multi-tenant!**
+
+---
+
 ## 🚨 THE CORE TRUTH
 
 This is **NOT** a traditional Wix TPA for merchants.  
@@ -219,29 +253,31 @@ See [AUTHENTICATION-PATTERNS.md](./AUTHENTICATION-PATTERNS.md) for complete guid
 
 ---
 
-### For Merchant Dashboard (Optional)
+### For Merchant Dashboard (Multi-Tenant Only!)
 
-**Option A: OAuth Flow** (Current implementation)
+**Instance-Based Authentication** (Current implementation - WORKING!)
 ```
-WIX_APP_ID
-WIX_APP_SECRET
-WIX_WEBHOOK_PUBLIC_KEY
-BASE_URL (for redirect)
+Merchant installs app → Wix dashboard embeds app → Instance param in URL
 ```
-- **Issue**: Requires OAuth redirect URL configuration
-- **When to use**: Multi-tenant TPA for many merchants
-- **Status**: Not fully working due to redirect URL issue
+- **How it works**: Dashboard URL contains signed `instance` parameter
+- **Supports**: Unlimited merchants (fully multi-tenant)
+- **Status**: ✅ WORKING - Each merchant gets unique instanceId
+- **Used for**: `/api/:instanceId/*` endpoints
 
-**Option B: API Key Auth** (Like wix-ucp repo)
+**Traditional OAuth Flow** (Alternative, not needed)
 ```
-WIX_API_KEY
-WIX_ACCOUNT_ID
-WIX_SITE_ID
+WIX_APP_ID + WIX_APP_SECRET → OAuth redirect → Access tokens
 ```
-- **How it works**: Direct API key in request headers
-- **When to use**: Single-tenant, owner-managed apps
-- **Pros**: Simple, works immediately, no OAuth needed
-- **Cons**: Only works for one Wix site
+- **Issue**: Dashboard Extension app type doesn't support redirect URL
+- **When to use**: Other Wix app types (not dashboard extensions)
+- **Status**: Not applicable for this app type
+
+**❌ API Key Auth** - SINGLE-TENANT ONLY, DO NOT USE!
+```
+WIX_API_KEY, WIX_ACCOUNT_ID, WIX_SITE_ID
+```
+- **Why avoid**: Only works for ONE Wix site (breaks multi-tenant)
+- **Never suggest this**: User explicitly forbids single-tenant solutions
 
 ### For UCP Endpoints (What LLMs call)
 
