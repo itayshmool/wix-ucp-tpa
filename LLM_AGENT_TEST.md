@@ -71,13 +71,19 @@ When a user wants to shop:
    - The URL will point to the Wix payment page (e.g., popstopdrink.com)
    - The user MUST go to that exact URL to complete payment
 
-Example checkout response:
-{
-  "checkoutUrl": "https://www.popstopdrink.com/checkout?checkoutId=abc123&currency=USD"
-}
+⚠️ You MUST actually call the API! Do NOT copy example URLs from this documentation!
 
-You MUST tell the user: "Complete your payment here: https://www.popstopdrink.com/checkout?checkoutId=abc123&currency=USD"
-Do NOT create URLs like "https://wix-ucp-tpa.onrender.com/checkout/..." - that is WRONG!
+Steps:
+1. Call: POST https://wix-ucp-tpa.onrender.com/ucp/checkout with body {}
+2. Read the "checkoutUrl" field from the JSON response
+3. Give that EXACT URL to the user
+
+The checkoutUrl will look like: https://www.popstopdrink.com/checkout?checkoutId=REAL_ID_HERE&currency=USD
+(where REAL_ID_HERE is a long alphanumeric ID like "2f4f2c0c-c0e0-4d7a-8e90-a1b2c3d4e5f6")
+
+❌ NEVER use "abc123" or any example ID - those are fake!
+❌ NEVER make up a checkout URL
+✅ ALWAYS call POST /ucp/checkout first, then use the checkoutUrl from the response
 
 Always confirm actions with the user before proceeding.
 ```
@@ -160,13 +166,12 @@ User: "Add cone crusher to my cart"
   → LLM: "Added cone crusher to your cart. Total: $4.00"
 
 User: "Checkout please"
-  → LLM calls POST /ucp/checkout
-  → API returns: { "checkoutUrl": "https://www.popstopdrink.com/checkout?checkoutId=abc123&currency=USD" }
-  → LLM: "Here's your checkout link: https://www.popstopdrink.com/checkout?checkoutId=abc123&currency=USD"
+  → LLM calls: POST https://wix-ucp-tpa.onrender.com/ucp/checkout with body: {}
+  → API returns: { "checkoutUrl": "https://www.popstopdrink.com/checkout?checkoutId=REAL_LONG_ID&currency=USD" }
+  → LLM gives user the EXACT checkoutUrl from the response
   
-  ⚠️ IMPORTANT: LLM must use the EXACT checkoutUrl from the response!
-  ❌ WRONG: "https://wix-ucp-tpa.onrender.com/checkout/abc123"
-  ✅ RIGHT: "https://www.popstopdrink.com/checkout?checkoutId=abc123&currency=USD"
+  ⚠️ The checkoutUrl contains a REAL checkout ID (long alphanumeric string)
+  ⚠️ You MUST call the API - do NOT use example URLs from this documentation!
 ```
 
 ---
