@@ -29,12 +29,15 @@ Response format:
       "name": "string", 
       "description": "string",
       "price": { "amount": number, "currency": "USD", "formatted": "$X.XX" },
-      "images": [{ "url": "string" }],
+      "images": [{ "url": "https://static.wixstatic.com/media/...", "alt": "string" }],
       "available": boolean
     }
   ],
   "pagination": { "total": number, "hasMore": boolean }
 }
+
+When showing products to users, include the image URL so they can see the product.
+Example: "cone crusher ($4.00) - Image: https://static.wixstatic.com/media/..."
 
 ### 3. Create/Add to Cart
 POST /ucp/cart
@@ -143,7 +146,14 @@ curl -X POST https://wix-ucp-tpa.onrender.com/ucp/checkout \
 ```
 User: "Show me what you have"
   → LLM calls GET /ucp/products
-  → LLM: "We have: cone crusher ($4), Nitro Dr ($4), Caramel Clutch ($4)..."
+  → LLM: "Here are our products:
+    
+    1. **cone crusher** - $4.00
+       ![cone crusher](https://static.wixstatic.com/media/11062b_723b720fab234a8f984ea3956739a9ab~mv2.jpg)
+    
+    2. **Nitro Dr** - $4.00  
+       ![Nitro Dr](https://static.wixstatic.com/media/11062b_70c2d78b150047329343f5c2cc55fc15~mv2.jpg)
+    ..."
 
 User: "Add cone crusher to my cart"
   → LLM calls POST /ucp/cart with cone crusher's ID
