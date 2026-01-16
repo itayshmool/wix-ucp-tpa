@@ -34,3 +34,8 @@ coverage/
 # Misc
 .cache/
 .temp/
+
+# Google Cloud credentials (NEVER commit these!)
+google-merchant-key.json
+*-service-account.json
+*.pem
