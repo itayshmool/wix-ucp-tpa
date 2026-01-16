@@ -139,6 +139,55 @@ router.get('/ucp/products', async (req: Request, res: Response) => {
 });
 
 /**
+ * Google Merchant Center Feed (TSV format)
+ * GET /ucp/feed/google-merchant.tsv
+ * 
+ * Returns products in TSV format that Google Merchant Center can fetch automatically.
+ * Set this URL as your feed source in Merchant Center for auto-sync.
+ */
+router.get('/ucp/feed/google-merchant.tsv', async (_req: Request, res: Response) => {
+  try {
+    logger.info('UCP: Google Merchant feed request');
+
+    const client = getWixSdkClient();
+    const response = await client.products.queryProducts().limit(100).find();
+
+    // TSV Header
+    const headers = ['id', 'title', 'description', 'link', 'image_link', 'price', 'availability', 'condition', 'brand'];
+    const rows: string[] = [headers.join('\t')];
+
+    // Transform products to TSV rows
+    for (const product of response.items || []) {
+      // Parse price from formatted string if needed
+      const priceAmount = product.priceData?.price || 
+        parseFloat((product.priceData?.formatted?.price || '$0').replace(/[^0-9.]/g, ''));
+      
+      const row = [
+        product._id,                                                           // id
+        (product.name || '').replace(/\t|\n/g, ' '),                        // title
+        ((product.description || product.name || '').replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/\t|\n/g, ' ')).substring(0, 500), // description
+        `https://www.popstopdrink.com/product-page/${product.slug || product._id}`, // link
+        product.media?.mainMedia?.image?.url || '',                          // image_link
+        `${priceAmount.toFixed(2)} USD`,                                     // price
+        product.stock?.inStock !== false ? 'in_stock' : 'out_of_stock',     // availability
+        'new',                                                               // condition
+        'Pop Stop Drink',                                                    // brand
+      ];
+      rows.push(row.join('\t'));
+    }
+
+    // Return as TSV file
+    res.setHeader('Content-Type', 'text/tab-separated-values');
+    res.setHeader('Content-Disposition', 'attachment; filename="google-merchant-feed.tsv"');
+    res.send(rows.join('\n'));
+
+  } catch (error: any) {
+    logger.error('UCP: Google Merchant feed failed', { error: error.message });
+    res.status(500).send('Error generating feed');
+  }
+});
+
+/**
  * Gemini-Compatible Products Endpoint
  * GET /ucp/gemini/products
  * 
