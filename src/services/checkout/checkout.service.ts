@@ -26,7 +26,7 @@ export class CheckoutService {
   private client: WixApiClient;
 
   constructor(accessToken: string) {
-    this.client = new WixApiClient(accessToken);
+    this.client = new WixApiClient({ accessToken });
   }
 
   /**

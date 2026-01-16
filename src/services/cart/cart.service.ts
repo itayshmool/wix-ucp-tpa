@@ -23,7 +23,7 @@ export class CartService {
   private client: WixApiClient;
 
   constructor(accessToken: string) {
-    this.client = new WixApiClient(accessToken);
+    this.client = new WixApiClient({ accessToken });
   }
 
   /**

@@ -191,7 +191,7 @@ router.post(
 
     try {
       // Create Wix client and make a test API call
-      const client = new WixApiClient(instance.accessToken);
+      const client = new WixApiClient({ accessToken: instance.accessToken });
       
       // Make a simple API call to verify connection
       // Using the site properties endpoint which is always available

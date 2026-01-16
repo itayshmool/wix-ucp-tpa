@@ -50,7 +50,7 @@ router.get(
     }
 
     // Create API client and products service
-    const client = new WixApiClient(instance.accessToken);
+    const client = new WixApiClient({ accessToken: instance.accessToken });
     const productsService = new ProductsService(client, instanceId);
 
     // Query products
@@ -96,7 +96,7 @@ router.get(
     }
 
     // Create API client and products service
-    const client = new WixApiClient(instance.accessToken);
+    const client = new WixApiClient({ accessToken: instance.accessToken });
     const productsService = new ProductsService(client, instanceId);
 
     // Get product
@@ -134,7 +134,7 @@ router.get(
     }
 
     // Create API client and collections service
-    const client = new WixApiClient(instance.accessToken);
+    const client = new WixApiClient({ accessToken: instance.accessToken });
     const collectionsService = new CollectionsService(client, instanceId);
 
     // Get collections
@@ -175,7 +175,7 @@ router.get(
     }
 
     // Create API client and collections service
-    const client = new WixApiClient(instance.accessToken);
+    const client = new WixApiClient({ accessToken: instance.accessToken });
     const collectionsService = new CollectionsService(client, instanceId);
 
     // Get collection
@@ -216,7 +216,7 @@ router.get(
     }
 
     // Create API client and collections service
-    const client = new WixApiClient(instance.accessToken);
+    const client = new WixApiClient({ accessToken: instance.accessToken });
     const collectionsService = new CollectionsService(client, instanceId);
 
     // Get products

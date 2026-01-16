@@ -51,7 +51,7 @@ router.get(
     }
 
     // Create API client and inventory service
-    const client = new WixApiClient(instance.accessToken);
+    const client = new WixApiClient({ accessToken: instance.accessToken });
     const inventoryService = new InventoryService(client, instanceId);
 
     // Build query
@@ -117,7 +117,7 @@ router.get(
     }
 
     // Create API client and inventory service
-    const client = new WixApiClient(instance.accessToken);
+    const client = new WixApiClient({ accessToken: instance.accessToken });
     const inventoryService = new InventoryService(client, instanceId);
 
     // Get inventory
@@ -163,7 +163,7 @@ router.get(
     }
 
     // Create API client and inventory service
-    const client = new WixApiClient(instance.accessToken);
+    const client = new WixApiClient({ accessToken: instance.accessToken });
     const inventoryService = new InventoryService(client, instanceId);
 
     // Get low stock items
@@ -220,7 +220,7 @@ router.patch(
     }
 
     // Create API client and inventory service
-    const client = new WixApiClient(instance.accessToken);
+    const client = new WixApiClient({ accessToken: instance.accessToken });
     const inventoryService = new InventoryService(client, instanceId);
 
     // Update inventory
@@ -275,7 +275,7 @@ router.post(
     }
 
     // Create API client and inventory service
-    const client = new WixApiClient(instance.accessToken);
+    const client = new WixApiClient({ accessToken: instance.accessToken });
     const inventoryService = new InventoryService(client, instanceId);
 
     // Bulk update
@@ -330,7 +330,7 @@ router.post(
     }
 
     // Create API client and services
-    const client = new WixApiClient(instance.accessToken);
+    const client = new WixApiClient({ accessToken: instance.accessToken });
     const inventoryService = new InventoryService(client, instanceId);
     const syncService = new InventorySyncService(inventoryService, instanceId);
 
@@ -370,7 +370,7 @@ router.get(
     }
 
     // Create API client and services
-    const client = new WixApiClient(instance.accessToken);
+    const client = new WixApiClient({ accessToken: instance.accessToken });
     const inventoryService = new InventoryService(client, instanceId);
     const syncService = new InventorySyncService(inventoryService, instanceId);
 

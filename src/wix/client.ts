@@ -2,6 +2,9 @@
  * Wix API Client
  * 
  * Handles authenticated requests to Wix APIs.
+ * Supports two authentication methods:
+ * 1. OAuth (access token) - For merchant dashboard
+ * 2. API Keys - For public buyer/LLM endpoints
  */
 
 import axios, { AxiosInstance, AxiosError } from 'axios';
@@ -14,14 +17,36 @@ import { WixApiRequestOptions, WixApiError } from './types.js';
 const WIX_API_BASE_URL = 'https://www.wixapis.com';
 
 /**
+ * Authentication configuration
+ */
+interface WixAuthConfig {
+  // OAuth authentication
+  accessToken?: string;
+  
+  // API Key authentication
+  apiKey?: string;
+  accountId?: string;
+  siteId?: string;
+}
+
+/**
  * Wix API Client class
  */
 export class WixApiClient {
   private client: AxiosInstance;
-  private accessToken: string;
+  private authConfig: WixAuthConfig;
 
-  constructor(accessToken: string) {
-    this.accessToken = accessToken;
+  constructor(authConfig: WixAuthConfig) {
+    this.authConfig = authConfig;
+    
+    // Validate auth configuration
+    const hasOAuth = !!authConfig.accessToken;
+    const hasApiKeys = !!(authConfig.apiKey && authConfig.accountId && authConfig.siteId);
+    
+    if (!hasOAuth && !hasApiKeys) {
+      throw new Error('WixApiClient requires either accessToken or (apiKey + accountId + siteId)');
+    }
+
     this.client = axios.create({
       baseURL: WIX_API_BASE_URL,
       timeout: 10000,
@@ -33,7 +58,15 @@ export class WixApiClient {
     // Add request interceptor for authentication
     this.client.interceptors.request.use(
       (config) => {
-        config.headers.Authorization = `Bearer ${this.accessToken}`;
+        if (this.authConfig.accessToken) {
+          // OAuth authentication
+          config.headers.Authorization = `Bearer ${this.authConfig.accessToken}`;
+        } else if (this.authConfig.apiKey) {
+          // API Key authentication
+          config.headers.Authorization = this.authConfig.apiKey;
+          config.headers['wix-account-id'] = this.authConfig.accountId!;
+          config.headers['wix-site-id'] = this.authConfig.siteId!;
+        }
         return config;
       },
       (error) => {
@@ -169,8 +202,47 @@ export class WixApiClient {
 }
 
 /**
- * Create a Wix API client instance
+ * Create a Wix API client instance with OAuth
+ * Use for merchant dashboard endpoints
+ */
+export function createWixClientWithOAuth(accessToken: string): WixApiClient {
+  return new WixApiClient({ accessToken });
+}
+
+/**
+ * Create a Wix API client instance with API Keys
+ * Use for public buyer/LLM endpoints
+ */
+export function createWixClientWithApiKeys(
+  apiKey: string,
+  accountId: string,
+  siteId: string
+): WixApiClient {
+  return new WixApiClient({ apiKey, accountId, siteId });
+}
+
+/**
+ * Create a Wix API client instance from environment variables
+ * Uses API Keys from env for public endpoints
+ */
+export function createWixClientFromEnv(): WixApiClient {
+  const apiKey = process.env.WIX_API_KEY;
+  const accountId = process.env.WIX_ACCOUNT_ID;
+  const siteId = process.env.WIX_SITE_ID;
+
+  if (!apiKey || !accountId || !siteId) {
+    throw new Error(
+      'Missing Wix API Key environment variables: WIX_API_KEY, WIX_ACCOUNT_ID, WIX_SITE_ID'
+    );
+  }
+
+  return createWixClientWithApiKeys(apiKey, accountId, siteId);
+}
+
+/**
+ * @deprecated Use createWixClientWithOAuth instead
+ * Legacy method for backward compatibility
  */
 export function createWixClient(accessToken: string): WixApiClient {
-  return new WixApiClient(accessToken);
+  return createWixClientWithOAuth(accessToken);
 }

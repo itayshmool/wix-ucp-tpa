@@ -52,7 +52,7 @@ router.get(
     }
 
     // Create API client and orders service
-    const client = new WixApiClient(instance.accessToken);
+    const client = new WixApiClient({ accessToken: instance.accessToken });
     const ordersService = new OrdersService(client, instanceId);
 
     // Build query
@@ -126,7 +126,7 @@ router.get(
     }
 
     // Create API client and orders service
-    const client = new WixApiClient(instance.accessToken);
+    const client = new WixApiClient({ accessToken: instance.accessToken });
     const ordersService = new OrdersService(client, instanceId);
 
     // Get order
@@ -167,7 +167,7 @@ router.post(
     }
 
     // Create API client and orders service
-    const client = new WixApiClient(instance.accessToken);
+    const client = new WixApiClient({ accessToken: instance.accessToken });
     const ordersService = new OrdersService(client, instanceId);
 
     // Cancel order
@@ -227,7 +227,7 @@ router.post(
     }
 
     // Create API client and orders service
-    const client = new WixApiClient(instance.accessToken);
+    const client = new WixApiClient({ accessToken: instance.accessToken });
     const ordersService = new OrdersService(client, instanceId);
 
     // Create fulfillment request
@@ -284,7 +284,7 @@ router.patch(
     }
 
     // Create API client and orders service
-    const client = new WixApiClient(instance.accessToken);
+    const client = new WixApiClient({ accessToken: instance.accessToken });
     const ordersService = new OrdersService(client, instanceId);
 
     // Update tracking
