@@ -124,9 +124,13 @@ router.get('/ucp/products', async (req: Request, res: Response) => {
     };
 
     res.json(result);
-  } catch (error) {
-    logger.error('UCP: Failed to list products', { error });
-    sendError(res, 500, 'Failed to fetch products', 'PRODUCTS_ERROR');
+  } catch (error: any) {
+    logger.error('UCP: Failed to list products', { 
+      error: error.message || error,
+      details: error.details,
+      code: error.code,
+    });
+    sendError(res, 500, error.message || 'Failed to fetch products', 'PRODUCTS_ERROR');
   }
 });
 
