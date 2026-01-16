@@ -173,20 +173,24 @@ router.post('/ucp/cart', async (req: Request, res: Response) => {
 
     const client = await getPocClient();
 
-    // Step 1: Create empty cart
-    const createResponse = await client.post('/ecom/v1/carts', {});
-    const emptyCart = (createResponse as any).cart || createResponse;
-    const cartId = emptyCart.id || emptyCart._id;
+    // Convert UCP items to Wix lineItems format
+    const lineItems = items.map(item => ({
+      catalogReference: {
+        catalogItemId: item.productId,
+        appId: '1380b703-ce81-ff05-f115-39571d94dfcd', // Wix Stores App ID
+      },
+      quantity: item.quantity,
+    }));
 
-    logger.info('UCP: Empty cart created', { cartId });
+    logger.info('UCP: Sending lineItems to Wix', { lineItems: JSON.stringify(lineItems) });
 
-    // Step 2: Add items to cart
-    const lineItems = items.map(item => ucpCartItemToWix(item));
-    const addResponse = await client.post(`/ecom/v1/carts/${cartId}/addToCart`, {
+    const response = await client.post('/ecom/v1/carts', {
       lineItems,
     });
 
-    const cart = wixCartToUCP((addResponse as any).cart || addResponse);
+    logger.info('UCP: Cart response', { response: JSON.stringify(response) });
+
+    const cart = wixCartToUCP((response as any).cart || response);
     res.status(201).json(cart);
   } catch (error: any) {
     logger.error('UCP: Failed to create cart', { 
