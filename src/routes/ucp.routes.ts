@@ -139,6 +139,57 @@ router.get('/ucp/products', async (req: Request, res: Response) => {
 });
 
 /**
+ * Gemini-Compatible Products Endpoint
+ * GET /ucp/gemini/products
+ * 
+ * Returns products in the exact format Gemini expects
+ */
+router.get('/ucp/gemini/products', async (req: Request, res: Response) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
+
+    logger.info('UCP: Gemini products request', { limit });
+
+    const client = getWixSdkClient();
+    const response = await client.products.queryProducts().limit(limit).find();
+
+    // Transform to Gemini's expected format
+    const items = (response.items || []).map((wixProduct: any) => {
+      // Parse price from formatted string if needed
+      const priceAmount = wixProduct.priceData?.price || 
+        parseFloat(wixProduct.priceData?.formatted?.price?.replace(/[^0-9.]/g, '') || '0');
+
+      return {
+        id: wixProduct._id || wixProduct.id,
+        title: wixProduct.name,
+        description: (wixProduct.description || wixProduct.name || '')
+          .replace(/<[^>]*>/g, '')  // Strip HTML
+          .replace(/&amp;/g, '&'),
+        price: {
+          value: priceAmount,
+          currency: wixProduct.priceData?.currency || 'USD',
+        },
+        images: wixProduct.media?.items?.map((m: any) => m.image?.url).filter(Boolean) || 
+          (wixProduct.media?.mainMedia?.image?.url ? [wixProduct.media.mainMedia.image.url] : []),
+        status: wixProduct.stock?.inStock !== false ? 'IN_STOCK' : 'OUT_OF_STOCK',
+        action_link: `https://www.popstopdrink.com/product-page/${wixProduct.slug || wixProduct._id}`,
+      };
+    });
+
+    res.json({
+      items,
+      pagination: {
+        total: response.totalCount || items.length,
+        limit,
+      },
+    });
+  } catch (error: any) {
+    logger.error('UCP: Gemini products failed', { error: error.message });
+    sendError(res, 500, error.message || 'Failed to fetch products', 'PRODUCTS_ERROR');
+  }
+});
+
+/**
  * Get Single Product
  * GET /ucp/products/:id
  */
