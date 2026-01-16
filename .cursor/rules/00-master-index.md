@@ -1,11 +1,28 @@
 # Wix Store Agent - Complete Development Guide
 
+## 🚨 START HERE
+
+**⚠️ READ THIS FIRST**: [CRITICAL-ARCHITECTURE.md](./CRITICAL-ARCHITECTURE.md)
+
+This document contains essential architectural understanding that clarifies:
+- Who the actual end users are (buyers via LLM agents, NOT merchants)
+- Why we're building this (AI-first commerce via UCP protocol)
+- What each phase is really for
+- Authentication confusion resolved
+- Priority order for next steps
+
+**DO NOT PROCEED** without reading the critical architecture document first.
+
+---
+
 ## Overview
 
 A Wix TPA that:
 1. Integrates with Wix merchant stores (Phases 1-3)
 2. Enables external checkout (Phase 3)
 3. Exposes UCP interface for AI agents (Phases 4-6)
+
+**Core Purpose**: Enable LLM agents to shop on Wix stores using Universal Commerce Protocol (UCP)
 
 ## Tech Stack
 - Node.js 20+ / TypeScript 5+

@@ -2,6 +2,18 @@
 
 A Wix Third-Party Application with Universal Commerce Protocol integration for AI-powered commerce.
 
+## 🚨 Critical Documentation
+
+**⚠️ READ FIRST**: [.cursor/rules/CRITICAL-ARCHITECTURE.md](./.cursor/rules/CRITICAL-ARCHITECTURE.md)
+
+This document explains:
+- **The real architecture**: AI-first commerce via LLM agents + UCP protocol
+- **Who the users are**: Buyers (via AI) are primary, merchants are secondary
+- **Why authentication was confusing**: Two different flows for two different users
+- **What to focus on next**: Phase 3 (Checkout) → Phase 4-6 (UCP endpoints)
+
+---
+
 ## Status
 
 ✅ **Phase 1.1 Complete** - OAuth & Webhooks Integration
