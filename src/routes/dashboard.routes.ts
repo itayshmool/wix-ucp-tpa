@@ -320,18 +320,19 @@ function generateDashboard(decodedInstance: DecodedInstance, instance: WixInstan
         
         ${!hasOAuth ? `
         <div class="info warning">
-          <h3>🔑 OAuth Required for API Testing</h3>
-          <p>To test Phase 2 APIs, you need to complete the OAuth flow:</p>
-          <a href="/auth/install" class="btn btn-install" target="_blank">🚀 Complete OAuth Setup</a>
+          <h3>⚠️ APIs Will Return Errors Without OAuth</h3>
+          <p><strong>Testing tabs are enabled</strong>, but API calls will return 401 (Unauthorized) errors without OAuth tokens.</p>
+          <p><strong>For functional testing:</strong> Use the <a href="https://github.com/itayshmool/wix-ucp-tpa/blob/main/MANUAL_TESTING_GUIDE.md" target="_blank" style="color: #0c6efd;">Manual Testing Guide</a> with curl commands.</p>
+          <p><strong>To enable OAuth:</strong> Configure redirect URL in Wix Developer Console (if available for your app type).</p>
         </div>
         ` : ''}
         
         <!-- Tabs -->
         <div class="tabs">
           <button class="tab-btn active" onclick="switchTab('overview')">📊 Overview</button>
-          <button class="tab-btn" onclick="switchTab('products')" ${!hasOAuth ? 'disabled' : ''}>📦 Products API</button>
-          <button class="tab-btn" onclick="switchTab('orders')" ${!hasOAuth ? 'disabled' : ''}>📋 Orders API</button>
-          <button class="tab-btn" onclick="switchTab('inventory')" ${!hasOAuth ? 'disabled' : ''}>📊 Inventory API</button>
+          <button class="tab-btn" onclick="switchTab('products')">📦 Products API</button>
+          <button class="tab-btn" onclick="switchTab('orders')">📋 Orders API</button>
+          <button class="tab-btn" onclick="switchTab('inventory')">📊 Inventory API</button>
         </div>
         
         <!-- Overview Tab -->
