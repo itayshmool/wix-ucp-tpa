@@ -45,10 +45,10 @@ app.get('/health/ready', (_req, res) => {
 app.get('/', (_req, res) => {
   res.json({
     name: 'Wix UCP TPA',
-    version: '1.0.0-poc',
-    description: 'Wix Third-Party Application with UCP integration',
-    status: 'poc-phase',
-    phase: 'POC: UCP Layer + Test UI',
+    version: '1.1.0-sdk',
+    description: 'Wix Third-Party Application with UCP integration (using Wix SDK)',
+    status: 'poc-sdk',
+    phase: 'POC: UCP Layer + Test UI (Wix SDK)',
     endpoints: {
       // Health
       health: '/health',

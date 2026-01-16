@@ -5,19 +5,26 @@
  * - Browse products
  * - Add to cart
  * - Checkout
+ * 
+ * Uses Wix SDK via UCP routes.
  */
 
 import { Router, Request, Response } from 'express';
-import { getPocStoreInfo } from '../wix/poc-client.js';
 
 const router = Router();
+
+// POC Store Info (hardcoded for simplicity)
+const storeInfo = {
+  storeName: 'Wix POC Store',
+  storeUrl: 'https://wix-ucp-tpa.onrender.com',
+  currency: 'USD',
+};
 
 /**
  * Test Storefront Page
  * GET /test/storefront
  */
 router.get('/storefront', (_req: Request, res: Response) => {
-  const storeInfo = getPocStoreInfo();
   
   res.send(`
 <!DOCTYPE html>
@@ -457,7 +464,7 @@ router.get('/storefront', (_req: Request, res: Response) => {
   
   <!-- POC Badge -->
   <div class="poc-badge">
-    <strong>POC</strong> | UCP Protocol v1.0
+    <strong>POC</strong> | UCP Protocol v1.0 | Wix SDK
   </div>
   
   <script>
@@ -517,27 +524,15 @@ router.get('/storefront', (_req: Request, res: Response) => {
       try {
         showToast('Adding to cart...');
         
-        if (!cart) {
-          // Create new cart
-          const response = await fetch(API_BASE + '/ucp/cart', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              items: [{ productId, quantity: 1 }]
-            })
-          });
-          cart = await response.json();
-        } else {
-          // Add to existing cart
-          const response = await fetch(API_BASE + '/ucp/cart/' + cart.id + '/items', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              items: [{ productId, quantity: 1 }]
-            })
-          });
-          cart = await response.json();
-        }
+        // SDK uses currentCart - always use POST /ucp/cart to add items
+        const response = await fetch(API_BASE + '/ucp/cart', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            items: [{ productId, quantity: 1 }]
+          })
+        });
+        cart = await response.json();
         
         if (cart.error) {
           throw new Error(cart.message);
@@ -586,7 +581,8 @@ router.get('/storefront', (_req: Request, res: Response) => {
     
     async function removeFromCart(itemId) {
       try {
-        const response = await fetch(API_BASE + '/ucp/cart/' + cart.id + '/items/' + itemId, {
+        // SDK uses currentCart - DELETE /ucp/cart/items/:itemId
+        const response = await fetch(API_BASE + '/ucp/cart/items/' + itemId, {
           method: 'DELETE'
         });
         cart = await response.json();
@@ -608,10 +604,11 @@ router.get('/storefront', (_req: Request, res: Response) => {
         checkoutBtn.disabled = true;
         checkoutBtn.textContent = 'Creating checkout...';
         
+        // SDK uses currentCart - no cartId needed, uses current session cart
         const response = await fetch(API_BASE + '/ucp/checkout', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ cartId: cart.id })
+          body: JSON.stringify({})  // No cartId needed - uses currentCart
         });
         
         const checkout = await response.json();

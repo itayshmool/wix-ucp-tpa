@@ -3,15 +3,15 @@
  * 
  * These endpoints provide a standardized API for LLM agents and 
  * the Test UI to interact with the Wix store.
+ * 
+ * Uses Wix SDK for reliable API operations.
  */
 
 import { Router, Request, Response } from 'express';
-import { getPocClient, getPocStoreInfo } from '../wix/poc-client.js';
+import { getWixSdkClient } from '../wix/sdk-client.js';
 import { 
   wixProductToUCP, 
-  wixCartToUCP, 
-  ucpCartItemToWix,
-  wixOrderToUCP 
+  wixCartToUCP,
 } from '../services/ucp/ucp.translator.js';
 import { 
   UCPDiscovery, 
@@ -22,8 +22,12 @@ import {
   UCPError
 } from '../services/ucp/ucp.types.js';
 import { logger } from '../utils/logger.js';
+import { config } from '../config/env.js';
 
 const router = Router();
+
+// Wix Stores App ID (constant for catalogReference)
+const WIX_STORES_APP_ID = '1380b703-ce81-ff05-f115-39571d94dfcd';
 
 /**
  * Helper to send UCP error response
@@ -40,16 +44,14 @@ function sendError(res: Response, status: number, message: string, code?: string
  * Returns information about this UCP-enabled store
  */
 router.get('/.well-known/ucp', (_req: Request, res: Response) => {
-  const storeInfo = getPocStoreInfo();
-  
   const discovery: UCPDiscovery = {
     protocol: 'ucp',
-    version: '1.0.0-poc',
+    version: '1.0.0-sdk',
     store: {
-      id: storeInfo.clientId || 'poc-store',
-      name: storeInfo.storeName,
-      url: storeInfo.storeUrl,
-      currency: storeInfo.currency,
+      id: config.HEADLESS_CLIENT_ID || 'poc-store',
+      name: 'Wix POC Store',
+      url: config.BASE_URL || 'https://wix-ucp-tpa.onrender.com',
+      currency: 'USD',
       categories: ['general'],
     },
     capabilities: ['browse', 'search', 'cart', 'checkout'],
@@ -81,37 +83,24 @@ router.get('/ucp/products', async (req: Request, res: Response) => {
 
     logger.info('UCP: Listing products', { limit, offset, search });
 
-    const client = await getPocClient();
+    const client = getWixSdkClient();
 
-    // Build query for Wix API
-    const query: any = {
-      paging: {
-        limit,
-        offset,
-      },
-    };
+    // Build query using SDK
+    let query = client.products.queryProducts().limit(limit).skip(offset);
 
-    // Use search endpoint if search query provided
-    let response: any;
+    // Note: Search filter requires specific SDK method - for now just list all
+    // In production, use the search API or filter by name
+    const response = await query.find();
+
+    // Filter by name if search is provided (client-side for POC)
+    let items = response.items || [];
     if (search) {
-      response = await client.post('/stores/v1/products/query', {
-        query: {
-          ...query,
-          filter: {
-            name: { $contains: search }
-          }
-        },
-        includeVariants: true,
-      });
-    } else {
-      response = await client.post('/stores/v1/products/query', {
-        query,
-        includeVariants: true,
-      });
+      const searchLower = search.toLowerCase();
+      items = items.filter((p: any) => p.name?.toLowerCase().includes(searchLower));
     }
 
-    const products = (response.products || []).map(wixProductToUCP);
-    const total = response.totalResults || products.length;
+    const products = items.map(wixProductToUCP);
+    const total = response.totalCount || products.length;
 
     const result: UCPProductsResponse = {
       products,
@@ -119,7 +108,7 @@ router.get('/ucp/products', async (req: Request, res: Response) => {
         total,
         limit,
         offset,
-        hasMore: offset + products.length < total,
+        hasMore: response.hasNext(),
       },
     };
 
@@ -144,22 +133,26 @@ router.get('/ucp/products/:id', async (req: Request, res: Response) => {
     
     logger.info('UCP: Getting product', { id });
 
-    const client = await getPocClient();
-    const response = await client.get(`/stores/v1/products/${id}`);
+    const client = getWixSdkClient();
+    const response = await client.products.getProduct(id);
     
-    const product = wixProductToUCP((response as any).product || response);
+    // SDK returns product directly (or in .product property)
+    const productData = (response as any).product || response;
+    const product = wixProductToUCP(productData);
     res.json(product);
-  } catch (error) {
-    logger.error('UCP: Failed to get product', { error });
+  } catch (error: any) {
+    logger.error('UCP: Failed to get product', { error: error.message });
     sendError(res, 404, 'Product not found', 'PRODUCT_NOT_FOUND');
   }
 });
 
 /**
- * Create Cart
+ * Create Cart (add items to current cart)
  * POST /ucp/cart
  * 
  * Body: { items: [{ productId, quantity, variantId? }] }
+ * 
+ * Uses currentCart.addToCurrentCart which handles visitor session automatically
  */
 router.post('/ucp/cart', async (req: Request, res: Response) => {
   try {
@@ -171,26 +164,33 @@ router.post('/ucp/cart', async (req: Request, res: Response) => {
 
     logger.info('UCP: Creating cart', { itemCount: items.length });
 
-    const client = await getPocClient();
+    const client = getWixSdkClient();
 
-    // Convert UCP items to Wix lineItems format
+    // Convert UCP items to Wix SDK lineItems format
     const lineItems = items.map(item => ({
       catalogReference: {
         catalogItemId: item.productId,
-        appId: '1380b703-ce81-ff05-f115-39571d94dfcd', // Wix Stores App ID
+        appId: WIX_STORES_APP_ID,
       },
       quantity: item.quantity,
     }));
 
-    logger.info('UCP: Sending lineItems to Wix', { lineItems: JSON.stringify(lineItems) });
+    logger.debug('UCP: Adding items to current cart', { lineItems });
 
-    const response = await client.post('/ecom/v1/carts', {
+    // Use currentCart.addToCurrentCart - this handles visitor sessions automatically
+    const response = await client.currentCart.addToCurrentCart({
       lineItems,
     });
 
-    logger.info('UCP: Cart response', { response: JSON.stringify(response) });
+    // SDK returns cart directly or in .cart property
+    const cartData = (response as any).cart || response;
 
-    const cart = wixCartToUCP((response as any).cart || response);
+    logger.info('UCP: Cart updated', { 
+      cartId: cartData?.id || cartData?._id,
+      itemCount: cartData?.lineItems?.length 
+    });
+
+    const cart = wixCartToUCP(cartData || {});
     res.status(201).json(cart);
   } catch (error: any) {
     logger.error('UCP: Failed to create cart', { 
@@ -202,80 +202,152 @@ router.post('/ucp/cart', async (req: Request, res: Response) => {
 });
 
 /**
- * Get Cart
+ * Get Current Cart
+ * GET /ucp/cart
+ */
+router.get('/ucp/cart', async (_req: Request, res: Response) => {
+  try {
+    logger.info('UCP: Getting current cart');
+
+    const client = getWixSdkClient();
+    const response = await client.currentCart.getCurrentCart();
+    
+    // SDK returns cart directly or in .cart property
+    const cartData = (response as any).cart || response;
+    const cart = wixCartToUCP(cartData || {});
+    res.json(cart);
+  } catch (error: any) {
+    logger.error('UCP: Failed to get cart', { error: error.message });
+    // Return empty cart if no cart exists
+    res.json({
+      id: null,
+      items: [],
+      totals: {
+        subtotal: { amount: 0, currency: 'USD', formatted: '$0.00' },
+        total: { amount: 0, currency: 'USD', formatted: '$0.00' },
+        itemCount: 0,
+      },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+  }
+});
+
+/**
+ * Get Cart by ID (legacy support)
  * GET /ucp/cart/:id
  */
 router.get('/ucp/cart/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     
-    logger.info('UCP: Getting cart', { id });
+    logger.info('UCP: Getting cart by ID', { id });
 
-    const client = await getPocClient();
-    const response = await client.get(`/ecom/v1/carts/${id}`);
+    const client = getWixSdkClient();
+    const response = await client.cart.getCart(id);
     
-    const cart = wixCartToUCP((response as any).cart || response);
+    // SDK returns cart directly or in .cart property
+    const cartData = (response as any).cart || response;
+    const cart = wixCartToUCP(cartData || {});
     res.json(cart);
-  } catch (error) {
-    logger.error('UCP: Failed to get cart', { error });
+  } catch (error: any) {
+    logger.error('UCP: Failed to get cart', { error: error.message });
     sendError(res, 404, 'Cart not found', 'CART_NOT_FOUND');
   }
 });
 
 /**
- * Add/Update Cart Items
- * PUT /ucp/cart/:id/items
+ * Add Items to Current Cart
+ * POST /ucp/cart/items
  * 
  * Body: { items: [{ productId, quantity, variantId? }] }
  */
-router.put('/ucp/cart/:id/items', async (req: Request, res: Response) => {
+router.post('/ucp/cart/items', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
     const { items } = req.body;
 
-    if (!items || !Array.isArray(items)) {
+    if (!items || !Array.isArray(items) || items.length === 0) {
       return sendError(res, 400, 'Items array is required', 'INVALID_REQUEST');
     }
 
-    logger.info('UCP: Updating cart items', { cartId: id, itemCount: items.length });
+    logger.info('UCP: Adding items to cart', { itemCount: items.length });
 
-    const client = await getPocClient();
+    const client = getWixSdkClient();
 
-    // Convert UCP items to Wix format
-    const lineItems = items.map((item: any) => ucpCartItemToWix(item));
+    const lineItems = items.map((item: any) => ({
+      catalogReference: {
+        catalogItemId: item.productId,
+        appId: WIX_STORES_APP_ID,
+      },
+      quantity: item.quantity,
+    }));
 
-    const response = await client.post(`/ecom/v1/carts/${id}/addToCart`, {
+    const response = await client.currentCart.addToCurrentCart({
       lineItems,
     });
 
-    const cart = wixCartToUCP((response as any).cart || response);
+    const cartData = (response as any).cart || response;
+    const cart = wixCartToUCP(cartData || {});
     res.json(cart);
-  } catch (error) {
-    logger.error('UCP: Failed to update cart', { error });
+  } catch (error: any) {
+    logger.error('UCP: Failed to add items to cart', { error: error.message });
     sendError(res, 500, 'Failed to update cart', 'CART_ERROR');
   }
 });
 
 /**
- * Remove Cart Item
- * DELETE /ucp/cart/:id/items/:itemId
+ * Update Cart Item Quantity
+ * PUT /ucp/cart/items/:itemId
+ * 
+ * Body: { quantity: number }
  */
-router.delete('/ucp/cart/:id/items/:itemId', async (req: Request, res: Response) => {
+router.put('/ucp/cart/items/:itemId', async (req: Request, res: Response) => {
   try {
-    const { id, itemId } = req.params;
-    
-    logger.info('UCP: Removing cart item', { cartId: id, itemId });
+    const { itemId } = req.params;
+    const { quantity } = req.body;
 
-    const client = await getPocClient();
+    if (quantity === undefined || quantity < 0) {
+      return sendError(res, 400, 'Valid quantity is required', 'INVALID_REQUEST');
+    }
 
-    const response = await client.post(`/ecom/v1/carts/${id}/removeLineItems`, {
-      lineItemIds: [itemId],
-    });
+    logger.info('UCP: Updating cart item quantity', { itemId, quantity });
 
-    const cart = wixCartToUCP((response as any).cart || response);
+    const client = getWixSdkClient();
+
+    // SDK uses _id for line item updates
+    const response = await client.currentCart.updateCurrentCartLineItemQuantity([{
+      _id: itemId,
+      quantity,
+    }]);
+
+    const cartData = (response as any).cart || response;
+    const cart = wixCartToUCP(cartData || {});
     res.json(cart);
-  } catch (error) {
-    logger.error('UCP: Failed to remove cart item', { error });
+  } catch (error: any) {
+    logger.error('UCP: Failed to update cart item', { error: error.message });
+    sendError(res, 500, 'Failed to update item', 'CART_ERROR');
+  }
+});
+
+/**
+ * Remove Cart Item
+ * DELETE /ucp/cart/items/:itemId
+ */
+router.delete('/ucp/cart/items/:itemId', async (req: Request, res: Response) => {
+  try {
+    const { itemId } = req.params;
+    
+    logger.info('UCP: Removing cart item', { itemId });
+
+    const client = getWixSdkClient();
+
+    const response = await client.currentCart.removeLineItemsFromCurrentCart([itemId]);
+
+    const cartData = (response as any).cart || response;
+    const cart = wixCartToUCP(cartData || {});
+    res.json(cart);
+  } catch (error: any) {
+    logger.error('UCP: Failed to remove cart item', { error: error.message });
     sendError(res, 500, 'Failed to remove item from cart', 'CART_ERROR');
   }
 });
@@ -284,67 +356,87 @@ router.delete('/ucp/cart/:id/items/:itemId', async (req: Request, res: Response)
  * Create Checkout
  * POST /ucp/checkout
  * 
- * Body: { cartId, successUrl?, cancelUrl? }
+ * Body: { cartId?, successUrl?, cancelUrl? }
  * 
- * Returns a checkout URL that redirects to Wix Hosted Checkout
+ * Creates a checkout and returns the hosted checkout URL.
+ * If no cartId is provided, uses the current cart.
  */
 router.post('/ucp/checkout', async (req: Request, res: Response) => {
   try {
-    const { cartId } = req.body as UCPCreateCheckoutRequest;
-    // Note: successUrl and cancelUrl can be used in future for post-checkout redirects
-
-    if (!cartId) {
-      return sendError(res, 400, 'cartId is required', 'INVALID_REQUEST');
-    }
+    const { cartId, successUrl: _successUrl } = req.body as UCPCreateCheckoutRequest;
 
     logger.info('UCP: Creating checkout', { cartId });
 
-    const client = await getPocClient();
+    const client = getWixSdkClient();
 
-    // Create checkout from cart using the correct endpoint
-    const checkoutResponse = await client.post(`/ecom/v1/carts/${cartId}/createCheckout`, {
+    // Get cart to create checkout from
+    let cartData: any;
+    if (cartId) {
+      const cartResponse = await client.cart.getCart(cartId);
+      cartData = (cartResponse as any).cart || cartResponse;
+    } else {
+      const cartResponse = await client.currentCart.getCurrentCart();
+      cartData = (cartResponse as any).cart || cartResponse;
+    }
+
+    if (!cartData || !cartData.lineItems || cartData.lineItems.length === 0) {
+      return sendError(res, 400, 'Cart is empty', 'EMPTY_CART');
+    }
+
+    // Create checkout
+    const checkoutResponse = await client.checkout.createCheckout({
+      lineItems: cartData.lineItems.map((item: any) => ({
+        catalogReference: item.catalogReference,
+        quantity: item.quantity,
+      })),
       channelType: 'WEB',
     });
 
-    const checkout = (checkoutResponse as any).checkout || checkoutResponse;
-    const checkoutId = checkout.id || checkout._id;
-
+    // SDK returns checkout directly or in .checkout property
+    const checkoutData = (checkoutResponse as any).checkout || checkoutResponse;
+    const checkoutId = checkoutData?._id || checkoutData?.id;
+    
     logger.info('UCP: Checkout created', { checkoutId });
 
-    // Get redirect URL for hosted checkout
-    let checkoutUrl: string;
+    if (!checkoutId) {
+      throw new Error('Checkout creation failed - no checkout ID returned');
+    }
+
+    // Get checkout URL using the redirect URLs API
+    let checkoutUrl = '';
     try {
-      const redirectResponse = await client.post(`/ecom/v1/checkouts/${checkoutId}/getCheckoutUrl`, {});
-      checkoutUrl = (redirectResponse as any).checkoutUrl || '';
-    } catch (urlError) {
-      // Fallback: construct URL manually
-      logger.warn('UCP: Could not get checkout URL, using fallback', { urlError });
+      // Try to get checkout URL - method takes checkoutId as string
+      const redirectResponse = await client.checkout.getCheckoutUrl(checkoutId);
+      checkoutUrl = (redirectResponse as any).checkoutUrl || redirectResponse || '';
+    } catch (urlError: any) {
+      logger.warn('UCP: Could not get checkout URL', { error: urlError.message });
+      // Fallback URL construction
       checkoutUrl = `https://www.wix.com/checkout/${checkoutId}`;
     }
 
     const result: UCPCheckout = {
       id: checkoutId,
-      cartId,
+      cartId: cartData?.id || cartData?._id || cartId,
       checkoutUrl,
       totals: {
         subtotal: {
-          amount: parseFloat(checkout.priceSummary?.subtotal?.amount) || 0,
-          currency: checkout.currency || 'USD',
-          formatted: checkout.priceSummary?.subtotal?.formattedAmount || '$0.00',
+          amount: parseFloat(checkoutData?.priceSummary?.subtotal?.amount || '0'),
+          currency: checkoutData?.currency || 'USD',
+          formatted: checkoutData?.priceSummary?.subtotal?.formattedAmount || '$0.00',
         },
         total: {
-          amount: parseFloat(checkout.priceSummary?.total?.amount) || 0,
-          currency: checkout.currency || 'USD',
-          formatted: checkout.priceSummary?.total?.formattedAmount || '$0.00',
+          amount: parseFloat(checkoutData?.priceSummary?.total?.amount || '0'),
+          currency: checkoutData?.currency || 'USD',
+          formatted: checkoutData?.priceSummary?.total?.formattedAmount || '$0.00',
         },
-        itemCount: checkout.lineItems?.length || 0,
+        itemCount: checkoutData?.lineItems?.length || 0,
       },
     };
 
     res.status(201).json(result);
-  } catch (error) {
-    logger.error('UCP: Failed to create checkout', { error });
-    sendError(res, 500, 'Failed to create checkout', 'CHECKOUT_ERROR');
+  } catch (error: any) {
+    logger.error('UCP: Failed to create checkout', { error: error.message, details: error.details });
+    sendError(res, 500, error.message || 'Failed to create checkout', 'CHECKOUT_ERROR');
   }
 });
 
@@ -352,21 +444,10 @@ router.post('/ucp/checkout', async (req: Request, res: Response) => {
  * Get Order
  * GET /ucp/orders/:id
  */
-router.get('/ucp/orders/:id', async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    
-    logger.info('UCP: Getting order', { id });
-
-    const client = await getPocClient();
-    const response = await client.get(`/ecom/v1/orders/${id}`);
-    
-    const order = wixOrderToUCP((response as any).order || response);
-    res.json(order);
-  } catch (error) {
-    logger.error('UCP: Failed to get order', { error });
-    sendError(res, 404, 'Order not found', 'ORDER_NOT_FOUND');
-  }
+router.get('/ucp/orders/:id', async (_req: Request, res: Response) => {
+  // Note: Orders API requires elevated permissions
+  // For POC, we'll return a placeholder
+  sendError(res, 501, 'Order retrieval not implemented in POC', 'NOT_IMPLEMENTED');
 });
 
 export default router;
