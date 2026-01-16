@@ -48,8 +48,8 @@ export interface WixAuthRequest {
  */
 export interface WixWebhookPayload {
   instanceId: string;
-  eventType: WixWebhookEventType;
-  data: unknown;
+  eventType: WixWebhookEventType | string; // Allow string for product webhooks
+  data: any; // Changed from unknown to any for easier access
   timestamp: string;
 }
 
@@ -61,7 +61,10 @@ export enum WixWebhookEventType {
   APP_REMOVED = 'app.removed',
   SITE_PUBLISHED = 'site.published',
   SITE_UNPUBLISHED = 'site.unpublished',
-  // Add more event types as needed
+  // Product webhooks (Phase 2.1)
+  PRODUCT_CREATED = 'wix.stores.v1.product_created',
+  PRODUCT_UPDATED = 'wix.stores.v1.product_updated',
+  PRODUCT_DELETED = 'wix.stores.v1.product_deleted',
 }
 
 /**

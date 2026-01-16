@@ -6,6 +6,7 @@ import { preserveRawBody } from './middleware/validate-webhook.js';
 import authRoutes from './routes/auth.routes.js';
 import webhookRoutes from './routes/webhook.routes.js';
 import dashboardRoutes from './routes/dashboard.routes.js';
+import productsRoutes from './routes/products.routes.js';
 
 const app = express();
 
@@ -37,10 +38,10 @@ app.get('/health/ready', (_req, res) => {
 app.get('/', (_req, res) => {
   res.json({
     name: 'Wix UCP TPA',
-    version: '0.1.3',
+    version: '0.2.1',
     description: 'Wix Third-Party Application with UCP integration',
-    status: 'phase-1.3',
-    phase: 'Webhooks & Dashboard Complete',
+    status: 'phase-2.1',
+    phase: 'Products & Catalog Integration',
     endpoints: {
       health: '/health',
       liveness: '/health/live',
@@ -50,6 +51,8 @@ app.get('/', (_req, res) => {
       webhooks: '/webhooks',
       dashboard: '/dashboard',
       dashboardAPI: '/dashboard/api',
+      productsAPI: '/api/:instanceId/products',
+      collectionsAPI: '/api/:instanceId/collections',
     },
   });
 });
@@ -58,6 +61,7 @@ app.get('/', (_req, res) => {
 app.use('/auth', authRoutes);
 app.use('/webhooks', webhookRoutes);
 app.use('/dashboard', dashboardRoutes);
+app.use('/api', productsRoutes);
 
 // Error handling (must be last)
 app.use(notFoundHandler);

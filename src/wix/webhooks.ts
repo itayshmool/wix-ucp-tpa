@@ -92,6 +92,58 @@ async function handleSiteUnpublished(
   });
 }
 
+// ============================================================================
+// Product Webhook Handlers (Phase 2.1)
+// ============================================================================
+
+/**
+ * Handle product created event
+ */
+async function handleProductCreated(payload: WixWebhookPayload): Promise<void> {
+  logger.info('Product created webhook received', {
+    instanceId: payload.instanceId,
+    productId: payload.data?.productId,
+  });
+
+  // TODO: Phase 2.2 - Store product in local cache/database
+  logger.debug('Product created event processed', {
+    instanceId: payload.instanceId,
+    productId: payload.data?.productId,
+  });
+}
+
+/**
+ * Handle product updated event
+ */
+async function handleProductUpdated(payload: WixWebhookPayload): Promise<void> {
+  logger.info('Product updated webhook received', {
+    instanceId: payload.instanceId,
+    productId: payload.data?.productId,
+  });
+
+  // TODO: Phase 2.2 - Update product in local cache/database
+  logger.debug('Product updated event processed', {
+    instanceId: payload.instanceId,
+    productId: payload.data?.productId,
+  });
+}
+
+/**
+ * Handle product deleted event
+ */
+async function handleProductDeleted(payload: WixWebhookPayload): Promise<void> {
+  logger.info('Product deleted webhook received', {
+    instanceId: payload.instanceId,
+    productId: payload.data?.productId,
+  });
+
+  // TODO: Phase 2.2 - Remove product from local cache/database
+  logger.debug('Product deleted event processed', {
+    instanceId: payload.instanceId,
+    productId: payload.data?.productId,
+  });
+}
+
 /**
  * Main webhook event handler
  */
@@ -119,6 +171,19 @@ export async function handleWebhookEvent(
 
       case WixWebhookEventType.SITE_UNPUBLISHED:
         await handleSiteUnpublished(payload);
+        break;
+
+      // Product webhooks
+      case WixWebhookEventType.PRODUCT_CREATED:
+        await handleProductCreated(payload);
+        break;
+
+      case WixWebhookEventType.PRODUCT_UPDATED:
+        await handleProductUpdated(payload);
+        break;
+
+      case WixWebhookEventType.PRODUCT_DELETED:
+        await handleProductDeleted(payload);
         break;
 
       default:
