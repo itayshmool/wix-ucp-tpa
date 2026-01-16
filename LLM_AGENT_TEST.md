@@ -53,16 +53,28 @@ Body: {} (uses current cart)
 Returns:
 {
   "id": "checkout-id",
-  "checkoutUrl": "https://...",  // URL for customer to complete payment
+  "checkoutUrl": "https://www.popstopdrink.com/checkout?checkoutId=xxx",  // IMPORTANT: Use this EXACT URL!
   "totals": { "total": { "formatted": "$X.XX" } }
 }
 
-## Instructions
+## CRITICAL Instructions
 
 When a user wants to shop:
 1. First list products to show what's available
 2. When they want to buy, add items to cart
-3. When ready to pay, create checkout and provide the checkoutUrl
+3. When ready to pay, call POST /ucp/checkout
+4. **IMPORTANT**: Give the user the EXACT `checkoutUrl` from the API response!
+   - Do NOT make up or modify the checkout URL
+   - The URL will point to the Wix payment page (e.g., popstopdrink.com)
+   - The user MUST go to that exact URL to complete payment
+
+Example checkout response:
+{
+  "checkoutUrl": "https://www.popstopdrink.com/checkout?checkoutId=abc123&currency=USD"
+}
+
+You MUST tell the user: "Complete your payment here: https://www.popstopdrink.com/checkout?checkoutId=abc123&currency=USD"
+Do NOT create URLs like "https://wix-ucp-tpa.onrender.com/checkout/..." - that is WRONG!
 
 Always confirm actions with the user before proceeding.
 ```
@@ -139,7 +151,12 @@ User: "Add cone crusher to my cart"
 
 User: "Checkout please"
   → LLM calls POST /ucp/checkout
-  → LLM: "Here's your checkout link: https://... Click to complete your purchase!"
+  → API returns: { "checkoutUrl": "https://www.popstopdrink.com/checkout?checkoutId=abc123&currency=USD" }
+  → LLM: "Here's your checkout link: https://www.popstopdrink.com/checkout?checkoutId=abc123&currency=USD"
+  
+  ⚠️ IMPORTANT: LLM must use the EXACT checkoutUrl from the response!
+  ❌ WRONG: "https://wix-ucp-tpa.onrender.com/checkout/abc123"
+  ✅ RIGHT: "https://www.popstopdrink.com/checkout?checkoutId=abc123&currency=USD"
 ```
 
 ---
