@@ -83,21 +83,29 @@ export function wixProductToUCP(wixProduct: any): UCPProduct {
     category: wixProduct.productType || wixProduct.collections?.[0]?.name,
     sku: wixProduct.sku,
     slug: wixProduct.slug,
-    variants: wixProduct.variants?.map((v: any) => ({
-      id: v.id || v._id,
-      name: v.choices?.map((c: any) => c.value).join(' / ') || 'Default',
-      price: {
-        amount: v.variant?.priceData?.price || price,
-        currency,
-        formatted: v.variant?.priceData?.formatted?.price || formattedPrice,
-      },
-      available: v.stock?.inStock ?? true,
-      sku: v.variant?.sku,
-      options: v.choices?.reduce((acc: any, c: any) => {
-        acc[c.optionName] = c.value;
-        return acc;
-      }, {}),
-    })),
+    variants: wixProduct.variants?.map((v: any) => {
+      // Handle different choices formats (array or object)
+      const choices = Array.isArray(v.choices) ? v.choices : 
+        (v.choices ? Object.entries(v.choices).map(([key, value]) => ({ optionName: key, value })) : []);
+      
+      return {
+        id: v.id || v._id,
+        name: choices.length > 0 ? choices.map((c: any) => c.value || c).join(' / ') : 'Default',
+        price: {
+          amount: v.variant?.priceData?.price || v.priceData?.price || price,
+          currency,
+          formatted: v.variant?.priceData?.formatted?.price || v.priceData?.formatted?.price || formattedPrice,
+        },
+        available: v.stock?.inStock ?? true,
+        sku: v.variant?.sku || v.sku,
+        options: choices.reduce((acc: any, c: any) => {
+          if (c.optionName && c.value) {
+            acc[c.optionName] = c.value;
+          }
+          return acc;
+        }, {}),
+      };
+    }),
   };
 }
 
