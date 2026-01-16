@@ -28,6 +28,7 @@ import {
  */
 const WIX_OAUTH_BASE_URL = 'https://www.wix.com/oauth';
 const WIX_TOKEN_URL = `${WIX_OAUTH_BASE_URL}/access`;
+const WIX_CREATE_TOKEN_URL = 'https://www.wixapis.com/oauth/access';
 
 /**
  * Generate the Wix authorization URL
@@ -46,6 +47,59 @@ export function getAuthorizationUrl(state?: string): string {
   const url = `${WIX_OAUTH_BASE_URL}/authorize?${params.toString()}`;
   logger.debug('Generated authorization URL', { hasState: !!state });
   return url;
+}
+
+/**
+ * Create access token from instance ID (for Dashboard Extension apps)
+ * 
+ * According to Wix docs: https://dev.wix.com/docs/build-apps/develop-your-app/access/authentication/authenticate-using-oauth
+ * Dashboard Extension apps get instanceId from the instance parameter,
+ * then exchange it for an access token.
+ */
+export async function createAccessTokenFromInstance(instanceId: string): Promise<WixTokenResponse> {
+  logger.info('Creating access token from instance ID', { instanceId });
+
+  try {
+    const response = await axios.post<WixTokenResponse>(
+      WIX_CREATE_TOKEN_URL,
+      {
+        grant_type: 'authorization_code', // As per Wix docs
+        client_id: config.WIX_APP_ID,
+        client_secret: config.WIX_APP_SECRET,
+        code: instanceId, // The instanceId is used as the "code"
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    if (!isWixTokenResponse(response.data)) {
+      logger.error('Invalid token response from Wix', { response: response.data });
+      throw new Error('Invalid token response from Wix');
+    }
+
+    logger.info('Successfully created access token from instance', {
+      instanceId,
+      expiresIn: response.data.expires_in,
+    });
+
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      logger.error('Failed to create access token from instance', {
+        instanceId,
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message,
+      });
+      throw new Error(
+        `Failed to create access token: ${error.response?.data?.message || error.message}`
+      );
+    }
+    throw error;
+  }
 }
 
 /**

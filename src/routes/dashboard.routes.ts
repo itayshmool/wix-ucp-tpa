@@ -8,7 +8,7 @@
 import { Router, Request, Response } from 'express';
 import { asyncHandler, AppError } from '../middleware/error-handler.js';
 import { instanceStore } from '../store/store.js';
-import { decodeInstance } from '../wix/auth.js';
+import { decodeInstance, createAccessTokenFromInstance } from '../wix/auth.js';
 import { WixApiClient } from '../wix/client.js';
 import { DecodedInstance, WixInstance } from '../wix/types.js';
 import { logger } from '../utils/logger.js';
@@ -51,27 +51,55 @@ router.get('/', asyncHandler(async (req: Request, res: Response): Promise<void> 
   // Get or create instance data from store
   let instance = await instanceStore.get(decodedInstance.instanceId);
 
-  if (!instance) {
-    logger.info('Creating new instance from dashboard access', { 
+  // If instance doesn't exist or doesn't have an access token, create one
+  if (!instance || !instance.accessToken) {
+    logger.info('Creating access token from instance ID', { 
       instanceId: decodedInstance.instanceId,
-      appDefId: decodedInstance.appDefId,
-      permissions: decodedInstance.permissions,
+      hasExistingInstance: !!instance,
     });
     
-    // Create instance record with instance parameter for dashboard-based auth
-    const newInstance: WixInstance = {
-      instanceId: decodedInstance.instanceId,
-      accessToken: '', // Will be populated via OAuth later (if configured)
-      refreshToken: '', // Will be populated via OAuth later (if configured)
-      installedAt: new Date(),
-      siteId: decodedInstance.siteOwnerId || decodedInstance.instanceId,
-      instanceParam: instanceParam, // Store for instance-based API calls
-    };
-    
-    await instanceStore.save(decodedInstance.instanceId, newInstance);
-    logger.info('Instance created successfully with instance parameter', { instanceId: newInstance.instanceId });
-    
-    instance = newInstance;
+    try {
+      // Exchange instanceId for OAuth access token (as per Wix docs)
+      const tokenResponse = await createAccessTokenFromInstance(decodedInstance.instanceId);
+      
+      if (!instance) {
+        // Create new instance with OAuth tokens
+        instance = {
+          instanceId: decodedInstance.instanceId,
+          accessToken: tokenResponse.access_token,
+          refreshToken: tokenResponse.refresh_token,
+          installedAt: new Date(),
+          siteId: decodedInstance.siteOwnerId || decodedInstance.instanceId,
+          instanceParam: instanceParam,
+        };
+        logger.info('New instance created with OAuth tokens', { instanceId: instance.instanceId });
+      } else {
+        // Update existing instance with OAuth tokens
+        instance.accessToken = tokenResponse.access_token;
+        instance.refreshToken = tokenResponse.refresh_token;
+        instance.instanceParam = instanceParam;
+        logger.info('Existing instance updated with OAuth tokens', { instanceId: instance.instanceId });
+      }
+      
+      await instanceStore.save(decodedInstance.instanceId, instance);
+    } catch (error) {
+      logger.error('Failed to create access token from instance', {
+        instanceId: decodedInstance.instanceId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      // Continue anyway - dashboard will still load, but API calls will fail
+      if (!instance) {
+        instance = {
+          instanceId: decodedInstance.instanceId,
+          accessToken: '',
+          refreshToken: '',
+          installedAt: new Date(),
+          siteId: decodedInstance.siteOwnerId || decodedInstance.instanceId,
+          instanceParam: instanceParam,
+        };
+        await instanceStore.save(decodedInstance.instanceId, instance);
+      }
+    }
   } else if (!instance.instanceParam) {
     // Update existing instance with instance parameter if missing
     instance.instanceParam = instanceParam;
