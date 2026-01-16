@@ -11,6 +11,7 @@ import ordersRoutes from './routes/orders.routes.js';
 import inventoryRoutes from './routes/inventory.routes.js';
 import cartRoutes from './routes/cart.routes.js';
 import checkoutRoutes from './routes/checkout.routes.js';
+import storefrontRoutes from './routes/storefront.routes.js';
 
 const app = express();
 
@@ -42,10 +43,10 @@ app.get('/health/ready', (_req, res) => {
 app.get('/', (_req, res) => {
   res.json({
     name: 'Wix UCP TPA',
-    version: '0.3.0',
+    version: '0.4.0',
     description: 'Wix Third-Party Application with UCP integration',
-    status: 'phase-3-in-progress',
-    phase: 'Phase 3.1-3.2: Cart & Checkout Complete',
+    status: 'phase-3-complete',
+    phase: 'Phase 3 Complete: Public Storefront Ready',
     endpoints: {
       health: '/health',
       liveness: '/health/live',
@@ -62,6 +63,9 @@ app.get('/', (_req, res) => {
       cartAPI: '/api/:instanceId/cart',
       checkoutAPI: '/api/:instanceId/checkout',
       quickCheckout: '/api/:instanceId/checkout/quick',
+      storefront: '/storefront/*',
+      storefrontProducts: '/storefront/products',
+      storefrontQuickCheckout: '/storefront/checkout/quick',
     },
   });
 });
@@ -75,6 +79,7 @@ app.use('/api', ordersRoutes);
 app.use('/api', inventoryRoutes);
 app.use('/api', cartRoutes);
 app.use('/api', checkoutRoutes);
+app.use('/storefront', storefrontRoutes);
 
 // Error handling (must be last)
 app.use(notFoundHandler);

@@ -1,6 +1,6 @@
 {
   "name": "wix-ucp-tpa",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Wix TPA with UCP integration for AI-powered commerce",
   "main": "dist/index.js",
   "type": "module",
