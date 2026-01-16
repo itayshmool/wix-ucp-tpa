@@ -27,6 +27,9 @@ interface WixAuthConfig {
   apiKey?: string;
   accountId?: string;
   siteId?: string;
+  
+  // Instance-based authentication (for Dashboard Extension apps)
+  instanceParam?: string;
 }
 
 /**
@@ -42,9 +45,10 @@ export class WixApiClient {
     // Validate auth configuration
     const hasOAuth = !!authConfig.accessToken;
     const hasApiKeys = !!(authConfig.apiKey && authConfig.accountId && authConfig.siteId);
+    const hasInstanceParam = !!authConfig.instanceParam;
     
-    if (!hasOAuth && !hasApiKeys) {
-      throw new Error('WixApiClient requires either accessToken or (apiKey + accountId + siteId)');
+    if (!hasOAuth && !hasApiKeys && !hasInstanceParam) {
+      throw new Error('WixApiClient requires either accessToken, (apiKey + accountId + siteId), or instanceParam');
     }
 
     this.client = axios.create({
@@ -61,6 +65,9 @@ export class WixApiClient {
         if (this.authConfig.accessToken) {
           // OAuth authentication
           config.headers.Authorization = `Bearer ${this.authConfig.accessToken}`;
+        } else if (this.authConfig.instanceParam) {
+          // Instance-based authentication (Dashboard Extension apps)
+          config.headers.Authorization = this.authConfig.instanceParam;
         } else if (this.authConfig.apiKey) {
           // API Key authentication
           config.headers.Authorization = this.authConfig.apiKey;
@@ -219,6 +226,14 @@ export function createWixClientWithApiKeys(
   siteId: string
 ): WixApiClient {
   return new WixApiClient({ apiKey, accountId, siteId });
+}
+
+/**
+ * Create a Wix API client instance with instance parameter
+ * Use for Dashboard Extension apps that don't have OAuth tokens
+ */
+export function createWixClientWithInstance(instanceParam: string): WixApiClient {
+  return new WixApiClient({ instanceParam });
 }
 
 /**

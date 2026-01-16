@@ -25,8 +25,13 @@ import { Money } from '../types/cart.types.js';
 export class CheckoutService {
   private client: WixApiClient;
 
-  constructor(accessToken: string) {
-    this.client = new WixApiClient({ accessToken });
+  constructor(authToken: string) {
+    // Check if authToken looks like an instance parameter (contains a dot for signature.payload format)
+    if (authToken.includes('.')) {
+      this.client = new WixApiClient({ instanceParam: authToken });
+    } else {
+      this.client = new WixApiClient({ accessToken: authToken });
+    }
   }
 
   /**

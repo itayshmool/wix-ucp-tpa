@@ -15,7 +15,7 @@ import { logger } from '../utils/logger.js';
 const router = Router();
 
 /**
- * Middleware to check for instance and OAuth tokens
+ * Middleware to check for instance and authentication
  */
 router.use('/:instanceId/*', async (req: Request, _res: Response, next) => {
   const { instanceId } = req.params;
@@ -26,14 +26,14 @@ router.use('/:instanceId/*', async (req: Request, _res: Response, next) => {
     throw new AppError('App instance not found. Please ensure the app is installed.', 404);
   }
 
-  if (!instance.accessToken) {
-    logger.warn('Access token not available for cart API access', { instanceId });
-    throw new AppError('Access token not available. Please complete OAuth flow.', 401);
+  // Check for any form of authentication
+  if (!instance.accessToken && !instance.instanceParam) {
+    logger.warn('No authentication available for cart API access', { instanceId });
+    throw new AppError('No authentication available. Instance has neither OAuth token nor instance parameter.', 401);
   }
 
-  // Attach instance and accessToken to request for later use
+  // Attach instance to request for later use
   (req as any).wixInstance = instance;
-  (req as any).wixAccessToken = instance.accessToken;
   next();
 });
 
@@ -70,9 +70,9 @@ router.post('/:instanceId/cart', asyncHandler(async (req: Request, res: Response
  */
 router.get('/:instanceId/cart/:cartId', asyncHandler(async (req: Request, res: Response) => {
   const { instanceId: _instanceId, cartId } = req.params;
-  const accessToken = (req as any).wixAccessToken;
-
-  const cartService = new CartService(accessToken);
+  const instance = (req as any).wixInstance;
+  const authToken = instance.accessToken || instance.instanceParam;
+  const cartService = new CartService(authToken);
   const cart = await cartService.getCart(cartId);
 
   res.json({ success: true, data: cart });
@@ -127,9 +127,9 @@ router.patch('/:instanceId/cart/:cartId/items/:lineItemId', asyncHandler(async (
  */
 router.delete('/:instanceId/cart/:cartId/items/:lineItemId', asyncHandler(async (req: Request, res: Response) => {
   const { instanceId: _instanceId, cartId, lineItemId } = req.params;
-  const accessToken = (req as any).wixAccessToken;
-
-  const cartService = new CartService(accessToken);
+  const instance = (req as any).wixInstance;
+  const authToken = instance.accessToken || instance.instanceParam;
+  const cartService = new CartService(authToken);
   const cart = await cartService.removeLineItem(cartId, lineItemId);
 
   res.json({ success: true, data: cart, message: 'Line item removed from cart' });
@@ -160,9 +160,9 @@ router.post('/:instanceId/cart/:cartId/coupon', asyncHandler(async (req: Request
  */
 router.delete('/:instanceId/cart/:cartId', asyncHandler(async (req: Request, res: Response) => {
   const { instanceId: _instanceId, cartId } = req.params;
-  const accessToken = (req as any).wixAccessToken;
-
-  const cartService = new CartService(accessToken);
+  const instance = (req as any).wixInstance;
+  const authToken = instance.accessToken || instance.instanceParam;
+  const cartService = new CartService(authToken);
   await cartService.deleteCart(cartId);
 
   res.json({ success: true, message: 'Cart deleted successfully' });

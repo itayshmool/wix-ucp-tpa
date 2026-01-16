@@ -7,7 +7,7 @@
 import { Router, Request, Response } from 'express';
 import { asyncHandler, AppError } from '../middleware/error-handler.js';
 import { instanceStore } from '../store/store.js';
-import { WixApiClient } from '../wix/client.js';
+import { createClientFromInstance } from '../wix/client-factory.js';
 import { InventoryService } from '../services/inventory/inventory.service.js';
 import { InventorySyncService } from '../services/inventory/sync.js';
 import { logger } from '../utils/logger.js';
@@ -45,13 +45,8 @@ router.get(
       throw new AppError('Instance not found', 404);
     }
 
-    // Check for access token
-    if (!instance.accessToken) {
-      throw new AppError('Access token not available. Please complete OAuth flow.', 401);
-    }
-
-    // Create API client and inventory service
-    const client = new WixApiClient({ accessToken: instance.accessToken });
+    // Create API client (automatically selects OAuth or instance-based auth)
+    const client = createClientFromInstance(instance);
     const inventoryService = new InventoryService(client, instanceId);
 
     // Build query
@@ -111,13 +106,8 @@ router.get(
       throw new AppError('Instance not found', 404);
     }
 
-    // Check for access token
-    if (!instance.accessToken) {
-      throw new AppError('Access token not available. Please complete OAuth flow.', 401);
-    }
-
-    // Create API client and inventory service
-    const client = new WixApiClient({ accessToken: instance.accessToken });
+    // Create API client (automatically selects OAuth or instance-based auth)
+    const client = createClientFromInstance(instance);
     const inventoryService = new InventoryService(client, instanceId);
 
     // Get inventory
@@ -157,13 +147,8 @@ router.get(
       throw new AppError('Instance not found', 404);
     }
 
-    // Check for access token
-    if (!instance.accessToken) {
-      throw new AppError('Access token not available. Please complete OAuth flow.', 401);
-    }
-
-    // Create API client and inventory service
-    const client = new WixApiClient({ accessToken: instance.accessToken });
+    // Create API client (automatically selects OAuth or instance-based auth)
+    const client = createClientFromInstance(instance);
     const inventoryService = new InventoryService(client, instanceId);
 
     // Get low stock items
@@ -214,13 +199,8 @@ router.patch(
       throw new AppError('Instance not found', 404);
     }
 
-    // Check for access token
-    if (!instance.accessToken) {
-      throw new AppError('Access token not available. Please complete OAuth flow.', 401);
-    }
-
-    // Create API client and inventory service
-    const client = new WixApiClient({ accessToken: instance.accessToken });
+    // Create API client (automatically selects OAuth or instance-based auth)
+    const client = createClientFromInstance(instance);
     const inventoryService = new InventoryService(client, instanceId);
 
     // Update inventory
@@ -269,13 +249,8 @@ router.post(
       throw new AppError('Instance not found', 404);
     }
 
-    // Check for access token
-    if (!instance.accessToken) {
-      throw new AppError('Access token not available. Please complete OAuth flow.', 401);
-    }
-
-    // Create API client and inventory service
-    const client = new WixApiClient({ accessToken: instance.accessToken });
+    // Create API client (automatically selects OAuth or instance-based auth)
+    const client = createClientFromInstance(instance);
     const inventoryService = new InventoryService(client, instanceId);
 
     // Bulk update
@@ -324,13 +299,8 @@ router.post(
       throw new AppError('Instance not found', 404);
     }
 
-    // Check for access token
-    if (!instance.accessToken) {
-      throw new AppError('Access token not available. Please complete OAuth flow.', 401);
-    }
-
-    // Create API client and services
-    const client = new WixApiClient({ accessToken: instance.accessToken });
+    // Create API client (automatically selects OAuth or instance-based auth)
+    const client = createClientFromInstance(instance);
     const inventoryService = new InventoryService(client, instanceId);
     const syncService = new InventorySyncService(inventoryService, instanceId);
 
@@ -364,13 +334,8 @@ router.get(
       throw new AppError('Instance not found', 404);
     }
 
-    // Check for access token
-    if (!instance.accessToken) {
-      throw new AppError('Access token not available. Please complete OAuth flow.', 401);
-    }
-
-    // Create API client and services
-    const client = new WixApiClient({ accessToken: instance.accessToken });
+    // Create API client (automatically selects OAuth or instance-based auth)
+    const client = createClientFromInstance(instance);
     const inventoryService = new InventoryService(client, instanceId);
     const syncService = new InventorySyncService(inventoryService, instanceId);
 

@@ -18,6 +18,7 @@ export interface WixInstance {
   installedAt: Date;
   siteId?: string;
   metaSiteId?: string;
+  instanceParam?: string; // Raw instance parameter for dashboard-based auth
 }
 
 /**

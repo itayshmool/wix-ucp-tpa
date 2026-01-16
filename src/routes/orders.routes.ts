@@ -7,7 +7,7 @@
 import { Router, Request, Response } from 'express';
 import { asyncHandler, AppError } from '../middleware/error-handler.js';
 import { instanceStore } from '../store/store.js';
-import { WixApiClient } from '../wix/client.js';
+import { createClientFromInstance } from '../wix/client-factory.js';
 import { OrdersService } from '../services/orders/orders.service.js';
 import { OrderStatus, PaymentStatus, CreateFulfillmentRequest } from '../services/types/order.types.js';
 import { logger } from '../utils/logger.js';
@@ -46,13 +46,8 @@ router.get(
       throw new AppError('Instance not found', 404);
     }
 
-    // Check for access token
-    if (!instance.accessToken) {
-      throw new AppError('Access token not available. Please complete OAuth flow.', 401);
-    }
-
-    // Create API client and orders service
-    const client = new WixApiClient({ accessToken: instance.accessToken });
+    // Create API client (automatically selects OAuth or instance-based auth)
+    const client = createClientFromInstance(instance);
     const ordersService = new OrdersService(client, instanceId);
 
     // Build query
@@ -120,13 +115,8 @@ router.get(
       throw new AppError('Instance not found', 404);
     }
 
-    // Check for access token
-    if (!instance.accessToken) {
-      throw new AppError('Access token not available. Please complete OAuth flow.', 401);
-    }
-
-    // Create API client and orders service
-    const client = new WixApiClient({ accessToken: instance.accessToken });
+    // Create API client (automatically selects OAuth or instance-based auth)
+    const client = createClientFromInstance(instance);
     const ordersService = new OrdersService(client, instanceId);
 
     // Get order
@@ -161,13 +151,8 @@ router.post(
       throw new AppError('Instance not found', 404);
     }
 
-    // Check for access token
-    if (!instance.accessToken) {
-      throw new AppError('Access token not available. Please complete OAuth flow.', 401);
-    }
-
-    // Create API client and orders service
-    const client = new WixApiClient({ accessToken: instance.accessToken });
+    // Create API client (automatically selects OAuth or instance-based auth)
+    const client = createClientFromInstance(instance);
     const ordersService = new OrdersService(client, instanceId);
 
     // Cancel order
@@ -221,13 +206,8 @@ router.post(
       throw new AppError('Instance not found', 404);
     }
 
-    // Check for access token
-    if (!instance.accessToken) {
-      throw new AppError('Access token not available. Please complete OAuth flow.', 401);
-    }
-
-    // Create API client and orders service
-    const client = new WixApiClient({ accessToken: instance.accessToken });
+    // Create API client (automatically selects OAuth or instance-based auth)
+    const client = createClientFromInstance(instance);
     const ordersService = new OrdersService(client, instanceId);
 
     // Create fulfillment request
@@ -278,13 +258,8 @@ router.patch(
       throw new AppError('Instance not found', 404);
     }
 
-    // Check for access token
-    if (!instance.accessToken) {
-      throw new AppError('Access token not available. Please complete OAuth flow.', 401);
-    }
-
-    // Create API client and orders service
-    const client = new WixApiClient({ accessToken: instance.accessToken });
+    // Create API client (automatically selects OAuth or instance-based auth)
+    const client = createClientFromInstance(instance);
     const ordersService = new OrdersService(client, instanceId);
 
     // Update tracking

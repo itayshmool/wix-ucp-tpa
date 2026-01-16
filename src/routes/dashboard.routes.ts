@@ -58,19 +58,25 @@ router.get('/', asyncHandler(async (req: Request, res: Response): Promise<void> 
       permissions: decodedInstance.permissions,
     });
     
-    // Create instance record (without OAuth tokens for now)
+    // Create instance record with instance parameter for dashboard-based auth
     const newInstance: WixInstance = {
       instanceId: decodedInstance.instanceId,
-      accessToken: '', // Will be populated via OAuth later
-      refreshToken: '', // Will be populated via OAuth later
+      accessToken: '', // Will be populated via OAuth later (if configured)
+      refreshToken: '', // Will be populated via OAuth later (if configured)
       installedAt: new Date(),
       siteId: decodedInstance.siteOwnerId || decodedInstance.instanceId,
+      instanceParam: instanceParam, // Store for instance-based API calls
     };
     
     await instanceStore.save(decodedInstance.instanceId, newInstance);
-    logger.info('Instance created successfully', { instanceId: newInstance.instanceId });
+    logger.info('Instance created successfully with instance parameter', { instanceId: newInstance.instanceId });
     
     instance = newInstance;
+  } else if (!instance.instanceParam) {
+    // Update existing instance with instance parameter if missing
+    instance.instanceParam = instanceParam;
+    await instanceStore.save(decodedInstance.instanceId, instance);
+    logger.info('Instance updated with instance parameter', { instanceId: instance.instanceId });
   }
 
   // Render dashboard with instance data

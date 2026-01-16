@@ -7,7 +7,7 @@
 import { Router, Request, Response } from 'express';
 import { asyncHandler, AppError } from '../middleware/error-handler.js';
 import { instanceStore } from '../store/store.js';
-import { WixApiClient } from '../wix/client.js';
+import { createClientFromInstance } from '../wix/client-factory.js';
 import { ProductsService } from '../services/products/products.service.js';
 import { CollectionsService } from '../services/products/collections.service.js';
 import { logger } from '../utils/logger.js';
@@ -44,13 +44,8 @@ router.get(
       throw new AppError('Instance not found', 404);
     }
 
-    // Check for access token
-    if (!instance.accessToken) {
-      throw new AppError('Access token not available. Please complete OAuth flow.', 401);
-    }
-
-    // Create API client and products service
-    const client = new WixApiClient({ accessToken: instance.accessToken });
+    // Create API client (automatically selects OAuth or instance-based auth)
+    const client = createClientFromInstance(instance);
     const productsService = new ProductsService(client, instanceId);
 
     // Query products
@@ -90,13 +85,8 @@ router.get(
       throw new AppError('Instance not found', 404);
     }
 
-    // Check for access token
-    if (!instance.accessToken) {
-      throw new AppError('Access token not available. Please complete OAuth flow.', 401);
-    }
-
-    // Create API client and products service
-    const client = new WixApiClient({ accessToken: instance.accessToken });
+    // Create API client (automatically selects OAuth or instance-based auth)
+    const client = createClientFromInstance(instance);
     const productsService = new ProductsService(client, instanceId);
 
     // Get product
@@ -128,13 +118,8 @@ router.get(
       throw new AppError('Instance not found', 404);
     }
 
-    // Check for access token
-    if (!instance.accessToken) {
-      throw new AppError('Access token not available. Please complete OAuth flow.', 401);
-    }
-
-    // Create API client and collections service
-    const client = new WixApiClient({ accessToken: instance.accessToken });
+    // Create API client (automatically selects OAuth or instance-based auth)
+    const client = createClientFromInstance(instance);
     const collectionsService = new CollectionsService(client, instanceId);
 
     // Get collections
@@ -169,13 +154,8 @@ router.get(
       throw new AppError('Instance not found', 404);
     }
 
-    // Check for access token
-    if (!instance.accessToken) {
-      throw new AppError('Access token not available. Please complete OAuth flow.', 401);
-    }
-
-    // Create API client and collections service
-    const client = new WixApiClient({ accessToken: instance.accessToken });
+    // Create API client (automatically selects OAuth or instance-based auth)
+    const client = createClientFromInstance(instance);
     const collectionsService = new CollectionsService(client, instanceId);
 
     // Get collection
@@ -210,13 +190,8 @@ router.get(
       throw new AppError('Instance not found', 404);
     }
 
-    // Check for access token
-    if (!instance.accessToken) {
-      throw new AppError('Access token not available. Please complete OAuth flow.', 401);
-    }
-
-    // Create API client and collections service
-    const client = new WixApiClient({ accessToken: instance.accessToken });
+    // Create API client (automatically selects OAuth or instance-based auth)
+    const client = createClientFromInstance(instance);
     const collectionsService = new CollectionsService(client, instanceId);
 
     // Get products

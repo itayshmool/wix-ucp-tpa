@@ -15,7 +15,7 @@ import { logger } from '../utils/logger.js';
 const router = Router();
 
 /**
- * Middleware to check for instance and OAuth tokens
+ * Middleware to check for instance and authentication
  */
 router.use('/:instanceId/*', async (req: Request, _res: Response, next) => {
   const { instanceId } = req.params;
@@ -26,14 +26,14 @@ router.use('/:instanceId/*', async (req: Request, _res: Response, next) => {
     throw new AppError('App instance not found. Please ensure the app is installed.', 404);
   }
 
-  if (!instance.accessToken) {
-    logger.warn('Access token not available for checkout API access', { instanceId });
-    throw new AppError('Access token not available. Please complete OAuth flow.', 401);
+  // Check for any form of authentication
+  if (!instance.accessToken && !instance.instanceParam) {
+    logger.warn('No authentication available for checkout API access', { instanceId });
+    throw new AppError('No authentication available. Instance has neither OAuth token nor instance parameter.', 401);
   }
 
-  // Attach instance and accessToken to request for later use
+  // Attach instance to request for later use
   (req as any).wixInstance = instance;
-  (req as any).wixAccessToken = instance.accessToken;
   next();
 });
 
@@ -71,9 +71,9 @@ router.post('/:instanceId/checkout/from-cart', asyncHandler(async (req: Request,
  */
 router.get('/:instanceId/checkout/:checkoutId', asyncHandler(async (req: Request, res: Response) => {
   const { instanceId: _instanceId, checkoutId } = req.params;
-  const accessToken = (req as any).wixAccessToken;
-
-  const checkoutService = new CheckoutService(accessToken);
+  const instance = (req as any).wixInstance;
+  const authToken = instance.accessToken || instance.instanceParam;
+  const checkoutService = new CheckoutService(authToken);
   const checkout = await checkoutService.getCheckout(checkoutId);
 
   res.json({ success: true, data: checkout });
@@ -231,9 +231,9 @@ router.post('/:instanceId/checkout/quick', asyncHandler(async (req: Request, res
  */
 router.get('/:instanceId/checkout/:checkoutId/status', asyncHandler(async (req: Request, res: Response) => {
   const { instanceId: _instanceId, checkoutId } = req.params;
-  const accessToken = (req as any).wixAccessToken;
-
-  const checkoutService = new CheckoutService(accessToken);
+  const instance = (req as any).wixInstance;
+  const authToken = instance.accessToken || instance.instanceParam;
+  const checkoutService = new CheckoutService(authToken);
   const checkout = await checkoutService.getCheckout(checkoutId);
 
   res.json({
