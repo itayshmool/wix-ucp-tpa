@@ -19,6 +19,9 @@ const envSchema = z.object({
   WIX_ACCOUNT_ID: z.string().optional(),
   WIX_SITE_ID: z.string().optional(),
   
+  // Wix Headless OAuth Client (for POC - visitor tokens)
+  HEADLESS_CLIENT_ID: z.string().optional(),
+  
   // Redis (Optional - falls back to in-memory if not provided)
   REDIS_URL: z.string().url().optional(),
 });

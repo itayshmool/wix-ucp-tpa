@@ -12,6 +12,8 @@ import inventoryRoutes from './routes/inventory.routes.js';
 import cartRoutes from './routes/cart.routes.js';
 import checkoutRoutes from './routes/checkout.routes.js';
 import storefrontRoutes from './routes/storefront.routes.js';
+import ucpRoutes from './routes/ucp.routes.js';
+import testUiRoutes from './routes/test-ui.routes.js';
 
 const app = express();
 
@@ -43,29 +45,26 @@ app.get('/health/ready', (_req, res) => {
 app.get('/', (_req, res) => {
   res.json({
     name: 'Wix UCP TPA',
-    version: '0.7.0',
+    version: '1.0.0-poc',
     description: 'Wix Third-Party Application with UCP integration',
-    status: 'phase-3-complete-with-oauth',
-    phase: 'Phase 3 Complete: Public Storefront Ready',
+    status: 'poc-phase',
+    phase: 'POC: UCP Layer + Test UI',
     endpoints: {
+      // Health
       health: '/health',
       liveness: '/health/live',
       readiness: '/health/ready',
-      install: '/auth/install',
-      authCallback: '/auth/callback',
-      webhooks: '/webhooks',
+      // UCP Protocol (POC)
+      ucpDiscovery: '/.well-known/ucp',
+      ucpProducts: '/ucp/products',
+      ucpCart: '/ucp/cart',
+      ucpCheckout: '/ucp/checkout',
+      ucpOrders: '/ucp/orders/:id',
+      // Test UI
+      testStorefront: '/test/storefront',
+      // Legacy (from previous phases)
       dashboard: '/dashboard',
-      dashboardAPI: '/dashboard/api',
-      productsAPI: '/api/:instanceId/products',
-      collectionsAPI: '/api/:instanceId/collections',
-      ordersAPI: '/api/:instanceId/orders',
-      inventoryAPI: '/api/:instanceId/inventory',
-      cartAPI: '/api/:instanceId/cart',
-      checkoutAPI: '/api/:instanceId/checkout',
-      quickCheckout: '/api/:instanceId/checkout/quick',
       storefront: '/storefront/*',
-      storefrontProducts: '/storefront/products',
-      storefrontQuickCheckout: '/storefront/checkout/quick',
     },
   });
 });
@@ -80,6 +79,12 @@ app.use('/api', inventoryRoutes);
 app.use('/api', cartRoutes);
 app.use('/api', checkoutRoutes);
 app.use('/storefront', storefrontRoutes);
+
+// UCP Routes (POC) - mounted at root for standard UCP paths
+app.use('/', ucpRoutes);
+
+// Test UI Routes (POC)
+app.use('/test', testUiRoutes);
 
 // Error handling (must be last)
 app.use(notFoundHandler);
