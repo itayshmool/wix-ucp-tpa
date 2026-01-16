@@ -16,12 +16,22 @@ This document explains:
 
 ## Status
 
-✅ **Phase 1.1 Complete** - OAuth & Webhooks Integration
+✅ **Phase 3.1-3.2 Complete** - Cart & Checkout Integration
 
-- OAuth 2.0 flow for Wix app installation
-- Webhook handling with signature validation
-- Instance store for OAuth tokens
-- Merchant dashboard (basic)
+- ✅ Phase 1: OAuth, Webhooks, Dashboard
+- ✅ Phase 2: Products, Orders, Inventory APIs
+- ✅ Phase 3.1: Cart Management (create, update, delete carts)
+- ✅ Phase 3.2: Checkout & Hosted Checkout URL Generation
+- 🎯 **LLM agents can now complete purchases!**
+
+### Recent Additions (v0.3.0)
+
+- Cart creation and management APIs
+- Checkout generation from carts
+- **Wix hosted checkout URL generation** (critical feature)
+- **Quick checkout endpoint** - One-call cart + checkout + URL
+- Checkout status polling for payment confirmation
+- Pre-fill buyer info and shipping address
 - Full TypeScript implementation with strict typing
 
 ## Tech Stack
