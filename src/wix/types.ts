@@ -65,6 +65,15 @@ export enum WixWebhookEventType {
   PRODUCT_CREATED = 'wix.stores.v1.product_created',
   PRODUCT_UPDATED = 'wix.stores.v1.product_updated',
   PRODUCT_DELETED = 'wix.stores.v1.product_deleted',
+  // Order webhooks (Phase 2.2)
+  ORDER_CREATED = 'wix.ecom.v1.order_created',
+  ORDER_UPDATED = 'wix.ecom.v1.order_updated',
+  ORDER_PAID = 'wix.ecom.v1.order_paid',
+  ORDER_FULFILLED = 'wix.ecom.v1.order_fulfilled',
+  ORDER_CANCELED = 'wix.ecom.v1.order_canceled',
+  // Inventory webhooks (Phase 2.3)
+  INVENTORY_UPDATED = 'wix.stores.v2.inventory_item_updated',
+  INVENTORY_QUANTITY_UPDATED = 'wix.stores.v2.inventory_item_quantity_updated',
 }
 
 /**

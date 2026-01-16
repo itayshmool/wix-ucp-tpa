@@ -114,6 +114,17 @@ export class WixApiClient {
   }
 
   /**
+   * PATCH request
+   */
+  async patch<T>(
+    path: string,
+    data?: unknown,
+    headers?: Record<string, string>
+  ): Promise<T> {
+    return this.request<T>({ method: 'PATCH', path, data, headers });
+  }
+
+  /**
    * DELETE request
    */
   async delete<T>(path: string, headers?: Record<string, string>): Promise<T> {
