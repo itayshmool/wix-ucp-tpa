@@ -144,6 +144,8 @@ router.get('/ucp/products', async (req: Request, res: Response) => {
  * 
  * Returns products in TSV format that Google Merchant Center can fetch automatically.
  * Set this URL as your feed source in Merchant Center for auto-sync.
+ * 
+ * Includes: shipping info, clean image URLs
  */
 router.get('/ucp/feed/google-merchant.tsv', async (_req: Request, res: Response) => {
   try {
@@ -152,8 +154,19 @@ router.get('/ucp/feed/google-merchant.tsv', async (_req: Request, res: Response)
     const client = getWixSdkClient();
     const response = await client.products.queryProducts().limit(100).find();
 
-    // TSV Header
-    const headers = ['id', 'title', 'description', 'link', 'image_link', 'price', 'availability', 'condition', 'brand'];
+    // TSV Header - includes shipping columns
+    const headers = [
+      'id', 
+      'title', 
+      'description', 
+      'link', 
+      'image_link', 
+      'price', 
+      'availability', 
+      'condition', 
+      'brand',
+      'shipping(country:price:service)',  // Shipping info
+    ];
     const rows: string[] = [headers.join('\t')];
 
     // Transform products to TSV rows
@@ -162,16 +175,28 @@ router.get('/ucp/feed/google-merchant.tsv', async (_req: Request, res: Response)
       const priceAmount = product.priceData?.price || 
         parseFloat((product.priceData?.formatted?.price || '$0').replace(/[^0-9.]/g, ''));
       
+      // Clean up image URL - ensure it ends with a valid extension
+      let imageUrl = product.media?.mainMedia?.image?.url || '';
+      // Wix URLs with /v1/fit/ need to be simplified - just use the base URL
+      if (imageUrl.includes('wixstatic.com')) {
+        // Extract base URL up to the file extension
+        const match = imageUrl.match(/(https:\/\/static\.wixstatic\.com\/media\/[^/]+\.(jpg|jpeg|png|gif|webp))/i);
+        if (match) {
+          imageUrl = match[1];
+        }
+      }
+      
       const row = [
         product._id,                                                           // id
-        (product.name || '').replace(/\t|\n/g, ' '),                        // title
+        (product.name || '').replace(/\t|\n/g, ' '),                          // title
         ((product.description || product.name || '').replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/\t|\n/g, ' ')).substring(0, 500), // description
         `https://www.popstopdrink.com/product-page/${product.slug || product._id}`, // link
-        product.media?.mainMedia?.image?.url || '',                          // image_link
-        `${priceAmount.toFixed(2)} USD`,                                     // price
-        product.stock?.inStock !== false ? 'in_stock' : 'out_of_stock',     // availability
-        'new',                                                               // condition
-        'Pop Stop Drink',                                                    // brand
+        imageUrl,                                                              // image_link (cleaned)
+        `${priceAmount.toFixed(2)} USD`,                                       // price
+        product.stock?.inStock !== false ? 'in_stock' : 'out_of_stock',       // availability
+        'new',                                                                 // condition
+        'Pop Stop Drink',                                                      // brand
+        'US:0 USD:Standard',                                                   // shipping (free shipping to US)
       ];
       rows.push(row.join('\t'));
     }
