@@ -93,6 +93,42 @@ The end buyer will interact with products through an **LLM agent** using the **U
 
 ---
 
+## 🏗️ THREE INTERFACES, ONE BACKEND
+
+**CRITICAL**: Phase 3 (Storefront) and Phase 4-6 (UCP) are NOT sequential - they're **parallel interfaces**!
+
+```
+Phase 1-2: Foundation
+      ↓
+┌─────┴─────┐
+↓           ↓
+Phase 3     Phase 4-6
+Storefront  UCP
+(REST)      (Protocol)
+↓           ↓
+Humans      LLMs
+↓           ↓
+SAME Backend
+SAME Auth
+SAME Wix APIs
+```
+
+**What they share**:
+- ✅ Merchant's credentials (server-side)
+- ✅ WixApiClient
+- ✅ Cart/Checkout logic
+- ✅ No buyer authentication
+- ✅ Public endpoints
+
+**What differs**:
+- 🔄 API paths (`/storefront/*` vs `/ucp/v1/*`)
+- 🔄 Request/Response format (REST vs UCP)
+- 🔄 Error messages (human vs LLM-friendly)
+
+**Key Insight**: Phase 4-6 is ~80% protocol translation, ~20% new logic!
+
+---
+
 ## 📋 PHASE PURPOSES (CLARIFIED)
 
 ### ✅ Phase 1: Wix App Setup
@@ -134,6 +170,54 @@ The end buyer will interact with products through an **LLM agent** using the **U
 ---
 
 ## 🔑 AUTHENTICATION CLARITY
+
+### 🌟 PUBLIC ENDPOINTS & SERVER-SIDE AUTHENTICATION (NEW!)
+
+**CRITICAL UNDERSTANDING**: Buyers and LLM agents do NOT authenticate!
+
+**How It Works**:
+```
+MERCHANT (One-Time Setup)
+    ↓
+Configures credentials in app (server-side)
+    ↓
+OUR APP uses merchant's credentials for ALL buyer/LLM requests
+    ↓
+BUYERS/LLMs make unauthenticated public requests
+```
+
+**Code Example**:
+```typescript
+// Server creates ONE client with merchant's credentials
+const wixClient = new WixApiClient({
+  apiKey: process.env.WIX_API_KEY,      // ← Merchant's key
+  accountId: process.env.WIX_ACCOUNT_ID, // ← Merchant's account
+  siteId: process.env.WIX_SITE_ID,       // ← Merchant's site
+});
+
+// Public endpoint - NO auth from buyer/LLM
+router.get('/storefront/products', async (req, res) => {
+  // Server uses merchant's credentials
+  const products = await wixClient.get('/stores/v1/products');
+  res.json({ products });
+});
+```
+
+**Real-World Analogy**:
+```
+🏪 Amazon (Merchant) has AWS credentials
+🏢 Amazon.com (Our App) uses those credentials server-side
+👤 You (Buyer) just click "Buy" - no AWS account needed!
+```
+
+**This pattern is used for**:
+- ✅ `/storefront/*` routes (Phase 3 buyer UI)
+- ✅ `/ucp/v1/*` routes (Phase 4-6 LLM agents)
+- ✅ All public commerce operations
+
+See [AUTHENTICATION-PATTERNS.md](./AUTHENTICATION-PATTERNS.md) for complete guide.
+
+---
 
 ### For Merchant Dashboard (Optional)
 
