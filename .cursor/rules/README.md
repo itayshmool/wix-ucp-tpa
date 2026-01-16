@@ -7,6 +7,7 @@ Complete development guide for building a Wix TPA with UCP integration.
 ```
 .cursor/rules/
 ├── 00-master-index.md              # 📚 Project Overview & Quick Reference
+├── deployment-guide.md             # 🚀 Deployment Guide (Render.com)
 │
 ├── practices/                      # 🎯 Professional Development Standards
 │   ├── tdd.mdc                    #    • Test-Driven Development rules
@@ -112,12 +113,17 @@ cat ../practices/tdd.mdc
 ## 📚 Content Summary
 
 - **1** Master index
+- **1** Deployment guide (with live deployment info)
 - **4** Phase folders
 - **4** Phase README files
 - **14** Phase implementation guides
 - **3** Professional practice standards
 
-**Total**: 22 comprehensive files covering the complete development lifecycle
+**Total**: 23 comprehensive files covering the complete development lifecycle
+
+## 📋 General Guides
+
+- **deployment-guide.md** - Complete deployment guide (Render.com, already deployed!)
 
 ## 🔗 External Resources
 
