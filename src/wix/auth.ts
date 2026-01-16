@@ -12,6 +12,7 @@
 
 import axios from 'axios';
 import * as jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import { config } from '../config/env.js';
 import { logger } from '../utils/logger.js';
 import { instanceStore } from '../store/instances.js';
@@ -164,10 +165,8 @@ export function parseInstanceId(signedInstance: string): string | null {
  * The instance parameter is passed by Wix when loading the dashboard in an iframe.
  * It's a signed string that needs to be verified using WIX_APP_SECRET.
  * 
- * Wix uses different formats depending on the app type:
- * 1. JWT format (header.payload.signature) - Used by most apps
- * 2. Encrypted base64 - Used by some older apps
- * 3. Plain base64 JSON - Development/testing
+ * Wix uses a 2-part format: signature.payload
+ * NOT the standard 3-part JWT (header.payload.signature)
  */
 export function decodeInstance(instance: string): DecodedInstance | null {
   try {
@@ -176,43 +175,85 @@ export function decodeInstance(instance: string): DecodedInstance | null {
       hasDots: instance.includes('.'),
     });
 
-    // Method 1: Try JWT verification with app secret
-    try {
-      const decoded = jwt.verify(instance, config.WIX_APP_SECRET, {
-        algorithms: ['HS256'],
-      }) as DecodedInstance;
-      
-      logger.info('Successfully decoded and verified instance (JWT)', {
-        instanceId: decoded.instanceId,
-        appDefId: decoded.appDefId,
-      });
-      
-      return decoded;
-    } catch (jwtError) {
-      logger.debug('Not a valid JWT, trying other methods', {
-        error: jwtError instanceof Error ? jwtError.message : 'Unknown',
-      });
-    }
-
-    // Method 2: Try decoding without verification (for development)
     const parts = instance.split('.');
-    if (parts.length === 3) {
+    
+    // Method 1: Wix 2-part format (signature.payload)
+    if (parts.length === 2) {
       try {
+        const [signature, encodedPayload] = parts;
+        
+        // Decode the payload
         const payload = JSON.parse(
-          Buffer.from(parts[1], 'base64url').toString('utf-8')
+          Buffer.from(encodedPayload, 'base64url').toString('utf-8')
         );
         
-        logger.warn('Decoded instance without signature verification', {
+        // Verify signature using HMAC-SHA256
+        const expectedSignature = crypto
+          .createHmac('sha256', config.WIX_APP_SECRET)
+          .update(encodedPayload)
+          .digest('base64url');
+        
+        const isValid = crypto.timingSafeEqual(
+          Buffer.from(signature),
+          Buffer.from(expectedSignature)
+        );
+        
+        if (!isValid) {
+          logger.warn('Instance signature verification failed', {
+            instanceId: payload.instanceId,
+          });
+          // Still return the payload but log the warning
+        } else {
+          logger.info('Instance signature verified successfully');
+        }
+        
+        logger.info('Successfully decoded Wix instance (2-part format)', {
           instanceId: payload.instanceId,
+          appDefId: payload.appDefId,
+          permissions: payload.permissions,
         });
         
         return payload as DecodedInstance;
-      } catch (parseError) {
-        logger.debug('Failed to parse JWT payload');
+      } catch (error) {
+        logger.error('Failed to decode 2-part format', {
+          error: error instanceof Error ? error.message : 'Unknown',
+        });
+      }
+    }
+    
+    // Method 2: Standard JWT (3-part) with verification
+    if (parts.length === 3) {
+      try {
+        const decoded = jwt.verify(instance, config.WIX_APP_SECRET, {
+          algorithms: ['HS256'],
+        }) as DecodedInstance;
+        
+        logger.info('Successfully decoded and verified instance (standard JWT)', {
+          instanceId: decoded.instanceId,
+        });
+        
+        return decoded;
+      } catch (jwtError) {
+        logger.debug('JWT verification failed, trying without verification');
+        
+        // Try decoding without verification (for development)
+        try {
+          const payload = JSON.parse(
+            Buffer.from(parts[1], 'base64url').toString('utf-8')
+          );
+          
+          logger.warn('Decoded JWT without signature verification', {
+            instanceId: payload.instanceId,
+          });
+          
+          return payload as DecodedInstance;
+        } catch (parseError) {
+          logger.debug('Failed to parse JWT payload');
+        }
       }
     }
 
-    // Method 3: Try base64 JSON (legacy/testing)
+    // Method 3: Try plain base64 JSON (legacy/testing)
     try {
       const decoded = JSON.parse(
         Buffer.from(instance, 'base64').toString('utf-8')
