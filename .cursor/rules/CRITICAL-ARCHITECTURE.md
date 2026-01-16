@@ -39,6 +39,80 @@
 
 ---
 
+## 🚨🚨🚨 OAUTH REDIRECT URL - STOP THE LOOP! 🚨🚨🚨
+
+**CRITICAL: READ THIS EVERY SINGLE TIME BEFORE SUGGESTING AUTH!**
+
+### ❌ WHAT DOES NOT WORK (AND NEVER WILL):
+
+**OAuth Redirect URL Configuration for Dashboard Extension Apps**
+
+### 🔄 The Loop We Keep Hitting:
+```
+1. User tries to test APIs
+2. APIs need authentication
+3. I suggest: "Configure OAuth redirect URL in Wix Console"
+4. User: "There's no place to configure it"
+5. We search everywhere in Wix Console
+6. We can't find it
+7. User gets frustrated
+8. LOOP REPEATS 😡
+```
+
+### 🛑 THE TRUTH (ACCEPT IT AND MOVE ON):
+
+**Dashboard Extension** app type in Wix **DOES NOT SUPPORT** configuring OAuth redirect URLs.
+
+- ❌ It's not in the Wix Developer Console
+- ❌ It's not in OAuth settings
+- ❌ It's not in advanced settings
+- ❌ We've looked multiple times
+- ❌ **IT SIMPLY DOESN'T EXIST FOR THIS APP TYPE**
+
+### ✅ WHAT DOES WORK:
+
+**Instance Parameter Authentication** (Already Implemented!)
+
+```typescript
+// Dashboard URL contains instance parameter
+/dashboard?instance=signature.payload
+
+// Decode it to get auth context
+const decoded = decodeInstance(instanceParam);
+
+// Use instanceId + app secret for Wix API calls
+const client = WixApiClient.fromInstanceId(
+  decoded.instanceId,
+  config.WIX_APP_SECRET
+);
+```
+
+### 🚨 NEVER SUGGEST THESE AGAIN:
+
+- ❌ "Configure OAuth redirect URL in Wix Console"
+- ❌ "Complete the OAuth flow"
+- ❌ "Add redirect URL to your app settings"
+- ❌ "Try /auth/install endpoint"
+- ❌ "Check Wix OAuth documentation"
+
+### ✅ ALWAYS SUGGEST THESE INSTEAD:
+
+- ✅ "Use instance-based authentication (already working!)"
+- ✅ "Decode the instance parameter from the dashboard URL"
+- ✅ "Use instanceId + app secret for Wix API calls"
+- ✅ "This is how Dashboard Extension apps authenticate"
+
+### 📝 REMEMBER:
+
+**The user has explicitly told me multiple times:**
+- "There's no place to configure it"
+- "We're in a loop"
+- "I'm tired of this"
+
+**STOP SUGGESTING OAUTH REDIRECT URL. IT'S NOT POSSIBLE. PERIOD.**
+
+---
+
 ## 🚨 THE CORE TRUTH
 
 This is **NOT** a traditional Wix TPA for merchants.  
@@ -255,7 +329,7 @@ See [AUTHENTICATION-PATTERNS.md](./AUTHENTICATION-PATTERNS.md) for complete guid
 
 ### For Merchant Dashboard (Multi-Tenant Only!)
 
-**Instance-Based Authentication** (Current implementation - WORKING!)
+**✅ Instance-Based Authentication** (Current implementation - WORKING!)
 ```
 Merchant installs app → Wix dashboard embeds app → Instance param in URL
 ```
@@ -263,14 +337,18 @@ Merchant installs app → Wix dashboard embeds app → Instance param in URL
 - **Supports**: Unlimited merchants (fully multi-tenant)
 - **Status**: ✅ WORKING - Each merchant gets unique instanceId
 - **Used for**: `/api/:instanceId/*` endpoints
+- **Auth method**: instanceId + WIX_APP_SECRET for Wix API calls
 
-**Traditional OAuth Flow** (Alternative, not needed)
+**THIS IS THE ONLY AUTH METHOD THAT WORKS FOR DASHBOARD APPS!**
+
+**❌ OAuth Redirect Flow** - DOES NOT WORK, STOP SUGGESTING IT!
 ```
-WIX_APP_ID + WIX_APP_SECRET → OAuth redirect → Access tokens
+WIX_APP_ID + WIX_APP_SECRET → OAuth redirect URL → Access tokens
 ```
-- **Issue**: Dashboard Extension app type doesn't support redirect URL
-- **When to use**: Other Wix app types (not dashboard extensions)
-- **Status**: Not applicable for this app type
+- **Issue**: Dashboard Extension app type **DOES NOT SUPPORT** redirect URL configuration
+- **We tried**: Multiple times, searched everywhere, doesn't exist
+- **Status**: ❌ NOT POSSIBLE for Dashboard Extension apps
+- **User is frustrated**: Stop suggesting this!
 
 **❌ API Key Auth** - SINGLE-TENANT ONLY, DO NOT USE!
 ```
