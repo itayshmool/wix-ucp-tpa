@@ -288,22 +288,26 @@ router.post('/ucp/checkout', async (req: Request, res: Response) => {
 
     const client = await getPocClient();
 
-    // Create checkout from cart
-    const checkoutResponse = await client.post('/ecom/v1/checkouts', {
-      cartId,
+    // Create checkout from cart using the correct endpoint
+    const checkoutResponse = await client.post(`/ecom/v1/carts/${cartId}/createCheckout`, {
       channelType: 'WEB',
     });
 
     const checkout = (checkoutResponse as any).checkout || checkoutResponse;
     const checkoutId = checkout.id || checkout._id;
 
-    // Get redirect URL for hosted checkout
-    const redirectResponse = await client.post(`/ecom/v1/checkouts/${checkoutId}/createCheckoutUrl`, {
-      checkoutId,
-    });
+    logger.info('UCP: Checkout created', { checkoutId });
 
-    const checkoutUrl = (redirectResponse as any).checkoutUrl || 
-      `https://wixingthis.wixsite.com/persthewp/checkout/${checkoutId}`;
+    // Get redirect URL for hosted checkout
+    let checkoutUrl: string;
+    try {
+      const redirectResponse = await client.post(`/ecom/v1/checkouts/${checkoutId}/getCheckoutUrl`, {});
+      checkoutUrl = (redirectResponse as any).checkoutUrl || '';
+    } catch (urlError) {
+      // Fallback: construct URL manually
+      logger.warn('UCP: Could not get checkout URL, using fallback', { urlError });
+      checkoutUrl = `https://www.wix.com/checkout/${checkoutId}`;
+    }
 
     const result: UCPCheckout = {
       id: checkoutId,
