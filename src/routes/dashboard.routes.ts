@@ -48,15 +48,29 @@ router.get('/', asyncHandler(async (req: Request, res: Response): Promise<void> 
     return;
   }
 
-  // Get instance data from store
-  const instance = instanceStore.get(decodedInstance.instanceId);
+  // Get or create instance data from store
+  let instance = instanceStore.get(decodedInstance.instanceId);
 
   if (!instance) {
-    logger.warn('Instance not found in store', { 
-      instanceId: decodedInstance.instanceId 
+    logger.info('Creating new instance from dashboard access', { 
+      instanceId: decodedInstance.instanceId,
+      appDefId: decodedInstance.appDefId,
+      permissions: decodedInstance.permissions,
     });
-    res.send(generateNotInstalledPage(decodedInstance.instanceId));
-    return;
+    
+    // Create instance record (without OAuth tokens for now)
+    const newInstance: WixInstance = {
+      instanceId: decodedInstance.instanceId,
+      accessToken: '', // Will be populated via OAuth later
+      refreshToken: '', // Will be populated via OAuth later
+      installedAt: new Date(),
+      siteId: decodedInstance.siteOwnerId || decodedInstance.instanceId,
+    };
+    
+    instanceStore.save(decodedInstance.instanceId, newInstance);
+    logger.info('Instance created successfully', { instanceId: newInstance.instanceId });
+    
+    instance = newInstance;
   }
 
   // Render dashboard with instance data
@@ -276,34 +290,6 @@ function generateErrorPage(message: string): string {
   `;
 }
 
-function generateNotInstalledPage(instanceId: string): string {
-  return `
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Not Installed - Wix UCP TPA</title>
-      ${getStyles()}
-    </head>
-    <body>
-      <div class="container">
-        <h1>⚠️ App Not Installed</h1>
-        <div class="info warning">
-          <p>Instance ID: <code>${instanceId}</code></p>
-          <p>This app is not yet installed or the installation was not completed.</p>
-        </div>
-        <h3>Next Steps:</h3>
-        <ol>
-          <li>Complete the OAuth installation flow</li>
-          <li>Ensure the app is authorized</li>
-          <li>Refresh this page</li>
-        </ol>
-      </div>
-    </body>
-    </html>
-  `;
-}
 
 function generateDashboard(decodedInstance: DecodedInstance, instance: WixInstance, locale: string): string {
   const instanceId = decodedInstance.instanceId;
@@ -325,10 +311,18 @@ function generateDashboard(decodedInstance: DecodedInstance, instance: WixInstan
         <div class="status-card success">
           <div class="status-icon">✅</div>
           <div class="status-content">
-            <h3>Connected</h3>
-            <p>Your Wix store is connected and ready</p>
+            <h3>App Installed</h3>
+            <p>Your Wix store is connected to Store Agent</p>
           </div>
         </div>
+        
+        ${!instance.accessToken || !instance.refreshToken ? `
+        <div class="info warning">
+          <h3>ℹ️ OAuth Not Configured</h3>
+          <p>The app is installed, but OAuth tokens are not available yet.</p>
+          <p>For Phase 1.3 (Dashboard), this is expected. OAuth will be needed for API calls in later phases.</p>
+        </div>
+        ` : ''}
         
         <div class="info-grid">
           <div class="info-item">
@@ -346,6 +340,10 @@ function generateDashboard(decodedInstance: DecodedInstance, instance: WixInstan
           <div class="info-item">
             <label>Permissions</label>
             <span>${decodedInstance.permissions || 'Standard'}</span>
+          </div>
+          <div class="info-item">
+            <label>OAuth Status</label>
+            <span>${instance.accessToken ? '✅ Configured' : '⚠️ Not configured'}</span>
           </div>
         </div>
         
