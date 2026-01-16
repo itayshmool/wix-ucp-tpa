@@ -293,7 +293,6 @@ function generateErrorPage(message: string): string {
 
 function generateDashboard(decodedInstance: DecodedInstance, instance: WixInstance, locale: string): string {
   const instanceId = decodedInstance.instanceId;
-  const hasOAuth = !!(instance.accessToken && instance.refreshToken);
   
   return `
     <!DOCTYPE html>
@@ -308,24 +307,22 @@ function generateDashboard(decodedInstance: DecodedInstance, instance: WixInstan
     <body>
       <div class="container">
         <h1>🏪 Store Agent Dashboard</h1>
-        <p class="subtitle">Phase 2 Complete - Full Store Integration</p>
+        <p class="subtitle">Multi-Tenant E-Commerce Platform - Phase 3 Complete</p>
         
-        <div class="status-card ${hasOAuth ? 'success' : 'warning'}">
-          <div class="status-icon">${hasOAuth ? '✅' : '⚠️'}</div>
+        <div class="status-card success">
+          <div class="status-icon">✅</div>
           <div class="status-content">
-            <h3>OAuth Status: ${hasOAuth ? 'Connected' : 'Not Configured'}</h3>
-            <p>${hasOAuth ? 'Ready to test all APIs' : 'Complete OAuth flow to test APIs'}</p>
+            <h3>Connected via Dashboard</h3>
+            <p>Your store is connected and ready to use!</p>
           </div>
         </div>
         
-        ${!hasOAuth ? `
-        <div class="info warning">
-          <h3>⚠️ APIs Will Return Errors Without OAuth</h3>
-          <p><strong>Testing tabs are enabled</strong>, but API calls will return 401 (Unauthorized) errors without OAuth tokens.</p>
-          <p><strong>For functional testing:</strong> Use the <a href="https://github.com/itayshmool/wix-ucp-tpa/blob/main/MANUAL_TESTING_GUIDE.md" target="_blank" style="color: #0c6efd;">Manual Testing Guide</a> with curl commands.</p>
-          <p><strong>To enable OAuth:</strong> Configure redirect URL in Wix Developer Console (if available for your app type).</p>
+        <div class="info">
+          <h3>🎯 Multi-Tenant Architecture</h3>
+          <p><strong>Your store instance:</strong> <code>/api/${instanceId}/*</code></p>
+          <p>Each merchant gets a unique instance ID. Buyers interact with your store using your instance endpoints.</p>
+          <p><strong>Test the APIs below</strong> or check the <a href="https://github.com/itayshmool/wix-ucp-tpa/blob/main/MANUAL_TESTING_GUIDE.md" target="_blank" style="color: #0c6efd;">Manual Testing Guide</a> for curl examples.</p>
         </div>
-        ` : ''}
         
         <!-- Tabs -->
         <div class="tabs">
@@ -479,7 +476,7 @@ function generateDashboard(decodedInstance: DecodedInstance, instance: WixInstan
         </div>
       </div>
       
-      ${getTestingScript(instanceId, hasOAuth)}
+      ${getTestingScript(instanceId)}
     </body>
     </html>
   `;
@@ -614,11 +611,10 @@ function getTestingStyles(): string {
   `;
 }
 
-function getTestingScript(instanceId: string, hasOAuth: boolean): string {
+function getTestingScript(instanceId: string): string {
   return `
     <script>
       const instanceId = '${instanceId}';
-      const hasOAuth = ${hasOAuth};
       
       // Tab switching
       function switchTab(tabName) {
