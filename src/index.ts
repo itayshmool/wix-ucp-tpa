@@ -37,10 +37,10 @@ app.get('/health/ready', (_req, res) => {
 app.get('/', (_req, res) => {
   res.json({
     name: 'Wix UCP TPA',
-    version: '0.1.1',
+    version: '0.1.3',
     description: 'Wix Third-Party Application with UCP integration',
-    status: 'phase-1.1',
-    phase: 'OAuth & Webhooks Enabled',
+    status: 'phase-1.3',
+    phase: 'Webhooks & Dashboard Complete',
     endpoints: {
       health: '/health',
       liveness: '/health/live',
@@ -49,6 +49,7 @@ app.get('/', (_req, res) => {
       authCallback: '/auth/callback',
       webhooks: '/webhooks',
       dashboard: '/dashboard',
+      dashboardAPI: '/dashboard/api',
     },
   });
 });

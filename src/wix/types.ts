@@ -97,6 +97,30 @@ export interface WixApiError {
 }
 
 // ============================================================================
+// Dashboard Instance Types
+// ============================================================================
+
+/**
+ * Decoded Wix instance JWT (passed in dashboard query params)
+ */
+export interface DecodedInstance {
+  instanceId: string;
+  appDefId: string;
+  signDate: number;
+  uid: string;
+  permissions: string;
+  ipAndPort?: string;
+  vendorProductId?: string;
+  aid?: string;
+  siteOwnerId?: string;
+  siteMemberId?: string;
+  expirationDate?: number;
+  loginAccountId?: string;
+  pai?: string;
+  lpai?: string;
+}
+
+// ============================================================================
 // Site Information Types
 // ============================================================================
 

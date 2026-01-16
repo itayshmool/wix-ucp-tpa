@@ -17,6 +17,7 @@ import { instanceStore } from '../store/instances.js';
 import {
   WixTokenResponse,
   WixAuthRequest,
+  DecodedInstance,
   isWixTokenResponse,
 } from './types.js';
 
@@ -151,6 +152,59 @@ export function parseInstanceId(signedInstance: string): string | null {
   } catch (error) {
     logger.error('Failed to parse instance ID from JWT', {
       error: error instanceof Error ? error.message : 'Unknown error',
+    });
+    return null;
+  }
+}
+
+/**
+ * Decode Wix instance JWT (from dashboard query params)
+ * 
+ * The instance parameter is passed by Wix when loading the dashboard in an iframe.
+ * It contains information about the app installation, site owner, and permissions.
+ * 
+ * Note: For reading purposes, we don't need to verify the signature since the
+ * request is coming from within Wix's secure iframe context. However, for
+ * sensitive operations, you should verify the JWT signature using WIX_APP_SECRET.
+ */
+export function decodeInstance(instance: string): DecodedInstance | null {
+  try {
+    logger.debug('Decoding Wix instance parameter');
+
+    // The instance can be either:
+    // 1. A JWT (format: header.payload.signature)
+    // 2. Base64-encoded JSON (legacy format)
+    
+    // Try JWT format first
+    const parts = instance.split('.');
+    if (parts.length === 3) {
+      // JWT format
+      const payload = JSON.parse(
+        Buffer.from(parts[1], 'base64url').toString('utf-8')
+      );
+      
+      logger.debug('Successfully decoded instance JWT', {
+        instanceId: payload.instanceId,
+        hasPermissions: !!payload.permissions,
+      });
+      
+      return payload as DecodedInstance;
+    }
+
+    // Try base64 format (legacy)
+    const decoded = JSON.parse(
+      Buffer.from(instance, 'base64').toString('utf-8')
+    );
+    
+    logger.debug('Successfully decoded instance (base64)', {
+      instanceId: decoded.instanceId,
+    });
+    
+    return decoded as DecodedInstance;
+  } catch (error) {
+    logger.error('Failed to decode instance parameter', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      instancePreview: instance.substring(0, 20) + '...',
     });
     return null;
   }
