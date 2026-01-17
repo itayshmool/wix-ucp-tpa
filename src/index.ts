@@ -14,6 +14,7 @@ import checkoutRoutes from './routes/checkout.routes.js';
 import storefrontRoutes from './routes/storefront.routes.js';
 import ucpRoutes from './routes/ucp.routes.js';
 import testUiRoutes from './routes/test-ui.routes.js';
+import testLlmRoutes from './routes/test-llm.routes.js';
 
 const app = express();
 
@@ -62,6 +63,7 @@ app.get('/', (_req, res) => {
       ucpOrders: '/ucp/orders/:id',
       // Test UI
       testStorefront: '/test/storefront',
+      testLlmChat: '/test/llm',
       // Legacy (from previous phases)
       dashboard: '/dashboard',
       storefront: '/storefront/*',
@@ -85,6 +87,9 @@ app.use('/', ucpRoutes);
 
 // Test UI Routes (POC)
 app.use('/test', testUiRoutes);
+
+// LLM Test Chat (POC) - mounted at root for /test/llm path
+app.use('/', testLlmRoutes);
 
 // Checkout callback routes (for post-payment redirects)
 // Catch-all for any /checkout/* pattern
