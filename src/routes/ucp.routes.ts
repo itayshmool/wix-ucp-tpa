@@ -711,15 +711,17 @@ router.get('/ucp/checkout/:checkoutId/status', async (req: Request, res: Respons
     
     // Wix uses 'completed' as a boolean field
     const isCompleted = checkoutData?.completed === true;
+    const orderId = checkoutData?.orderId || null;
+    const orderNumber = null; // Would need Orders API with elevated permissions
+    
     const status = isCompleted ? 'COMPLETED' : 'PENDING';
     
     const result = {
       checkoutId,
       status,
       completed: isCompleted,
-      // Order info if available
-      orderId: checkoutData?.orderId || null,
-      // Price summary
+      orderId,
+      orderNumber,
       totals: {
         total: {
           amount: parseFloat(checkoutData?.priceSummary?.total?.amount || '0'),
@@ -728,12 +730,10 @@ router.get('/ucp/checkout/:checkoutId/status', async (req: Request, res: Respons
         },
         itemCount: checkoutData?.lineItems?.length || 0,
       },
-      // Timestamps
       createdAt: checkoutData?.createdDate || null,
       completedAt: checkoutData?.completedDate || null,
-      // Human-readable message for LLM
       message: isCompleted 
-        ? `✅ Order completed! Order ID: ${checkoutData?.orderId || 'Processing...'}`
+        ? `✅ Order completed! ${orderNumber ? `Order #${orderNumber}` : orderId ? `Order ID: ${orderId}` : 'Check your email for details.'}`
         : '⏳ Payment not yet completed. User should complete checkout at the payment link.',
     };
 
