@@ -563,33 +563,21 @@ router.delete('/ucp/cart', async (_req: Request, res: Response) => {
  * Create Checkout
  * POST /ucp/checkout
  * 
- * Body: { cartId?, successUrl?, cancelUrl?, fresh?: boolean }
+ * Body: { cartId?, successUrl?, cancelUrl? }
  * 
  * Creates a checkout and returns the hosted checkout URL.
  * If no cartId is provided, uses the current cart.
  * 
- * IMPORTANT: Set fresh=true (default) to automatically clear cart first.
- * This prevents returning stale thank-you-page URLs from previous orders.
+ * Cart is cleared AFTER successful checkout creation to prevent reuse.
+ * Validates checkout URL to reject stale thank-you-page URLs.
  */
 router.post('/ucp/checkout', async (req: Request, res: Response) => {
   try {
-    const { cartId, successUrl: _successUrl, fresh = true } = req.body as UCPCreateCheckoutRequest & { fresh?: boolean };
+    const { cartId, successUrl: _successUrl } = req.body as UCPCreateCheckoutRequest;
 
-    logger.info('UCP: Creating checkout', { cartId, fresh });
+    logger.info('UCP: Creating checkout', { cartId });
 
     const client = getWixSdkClient();
-
-    // If fresh checkout requested (default), clear any existing cart first
-    // This prevents getting stale thank-you-page URLs
-    if (fresh && !cartId) {
-      try {
-        logger.info('UCP: Clearing cart for fresh checkout');
-        await client.currentCart.deleteCurrentCart();
-      } catch (clearError: any) {
-        // Cart may not exist - that's fine
-        logger.debug('UCP: Cart clear skipped (may not exist)', { error: clearError.message });
-      }
-    }
 
     // Get cart to create checkout from
     let cartData: any;
