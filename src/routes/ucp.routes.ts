@@ -500,21 +500,96 @@ router.delete('/ucp/cart/items/:itemId', async (req: Request, res: Response) => 
 });
 
 /**
+ * Clear/Delete Current Cart
+ * DELETE /ucp/cart
+ * 
+ * Clears all items from the current cart.
+ * IMPORTANT: Call this BEFORE creating a new checkout to ensure fresh checkout URL.
+ * This prevents getting stale thank-you-page URLs from previous completed orders.
+ */
+router.delete('/ucp/cart', async (_req: Request, res: Response) => {
+  try {
+    logger.info('UCP: Clearing current cart');
+
+    const client = getWixSdkClient();
+    
+    // Delete the current cart entirely
+    await client.currentCart.deleteCurrentCart();
+    
+    logger.info('UCP: Cart cleared successfully');
+    
+    res.json({ 
+      success: true, 
+      message: 'Cart cleared. Ready for new items.',
+      cart: {
+        id: null,
+        items: [],
+        totals: {
+          subtotal: { amount: 0, currency: 'USD', formatted: '$0.00' },
+          total: { amount: 0, currency: 'USD', formatted: '$0.00' },
+          itemCount: 0,
+        },
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+    });
+  } catch (error: any) {
+    // If no cart exists, that's fine - cart is already empty
+    if (error.message?.includes('not found') || error.code === 'CART_NOT_FOUND' || error.message?.includes('Cart not found')) {
+      logger.info('UCP: Cart already empty or not found');
+      return res.json({ 
+        success: true, 
+        message: 'Cart already empty',
+        cart: {
+          id: null,
+          items: [],
+          totals: {
+            subtotal: { amount: 0, currency: 'USD', formatted: '$0.00' },
+            total: { amount: 0, currency: 'USD', formatted: '$0.00' },
+            itemCount: 0,
+          },
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }
+      });
+    }
+    
+    logger.error('UCP: Failed to clear cart', { error: error.message });
+    return sendError(res, 500, error.message || 'Failed to clear cart', 'CART_ERROR');
+  }
+});
+
+/**
  * Create Checkout
  * POST /ucp/checkout
  * 
- * Body: { cartId?, successUrl?, cancelUrl? }
+ * Body: { cartId?, successUrl?, cancelUrl?, fresh?: boolean }
  * 
  * Creates a checkout and returns the hosted checkout URL.
  * If no cartId is provided, uses the current cart.
+ * 
+ * IMPORTANT: Set fresh=true (default) to automatically clear cart first.
+ * This prevents returning stale thank-you-page URLs from previous orders.
  */
 router.post('/ucp/checkout', async (req: Request, res: Response) => {
   try {
-    const { cartId, successUrl: _successUrl } = req.body as UCPCreateCheckoutRequest;
+    const { cartId, successUrl: _successUrl, fresh = true } = req.body as UCPCreateCheckoutRequest & { fresh?: boolean };
 
-    logger.info('UCP: Creating checkout', { cartId });
+    logger.info('UCP: Creating checkout', { cartId, fresh });
 
     const client = getWixSdkClient();
+
+    // If fresh checkout requested (default), clear any existing cart first
+    // This prevents getting stale thank-you-page URLs
+    if (fresh && !cartId) {
+      try {
+        logger.info('UCP: Clearing cart for fresh checkout');
+        await client.currentCart.deleteCurrentCart();
+      } catch (clearError: any) {
+        // Cart may not exist - that's fine
+        logger.debug('UCP: Cart clear skipped (may not exist)', { error: clearError.message });
+      }
+    }
 
     // Get cart to create checkout from
     let cartData: any;
@@ -527,7 +602,7 @@ router.post('/ucp/checkout', async (req: Request, res: Response) => {
     }
 
     if (!cartData || !cartData.lineItems || cartData.lineItems.length === 0) {
-      return sendError(res, 400, 'Cart is empty', 'EMPTY_CART');
+      return sendError(res, 400, 'Cart is empty. Add items first with POST /ucp/cart', 'EMPTY_CART');
     }
 
     // Create checkout
@@ -561,6 +636,32 @@ router.post('/ucp/checkout', async (req: Request, res: Response) => {
       checkoutUrl = `https://www.wix.com/checkout/${checkoutId}`;
     }
 
+    // CRITICAL: Validate the checkout URL is NOT a thank-you page
+    // Thank-you pages indicate a previously completed order - URL is stale!
+    if (checkoutUrl.includes('/thank-you-page/')) {
+      logger.error('UCP: Got stale thank-you-page URL instead of checkout', { 
+        staleUrl: checkoutUrl,
+        checkoutId,
+      });
+      
+      // Clear the cart to prevent this happening again
+      try {
+        await client.currentCart.deleteCurrentCart();
+      } catch (e) {
+        // Ignore errors
+      }
+      
+      return sendError(res, 409, 
+        'Previous checkout was already completed. Cart has been cleared. Please add items and try again.', 
+        'CHECKOUT_ALREADY_COMPLETED'
+      );
+    }
+
+    // Validate checkout URL format
+    if (!checkoutUrl.includes('/checkout')) {
+      logger.warn('UCP: Unexpected checkout URL format', { checkoutUrl, checkoutId });
+    }
+
     const result: UCPCheckout = {
       id: checkoutId,
       cartId: cartData?.id || cartData?._id || cartId,
@@ -580,10 +681,86 @@ router.post('/ucp/checkout', async (req: Request, res: Response) => {
       },
     };
 
+    // Clear cart after successful checkout creation to prevent reuse
+    try {
+      await client.currentCart.deleteCurrentCart();
+      logger.debug('UCP: Cart cleared after checkout creation');
+    } catch (e) {
+      // Non-critical - ignore
+    }
+
     res.status(201).json(result);
   } catch (error: any) {
     logger.error('UCP: Failed to create checkout', { error: error.message, details: error.details });
     sendError(res, 500, error.message || 'Failed to create checkout', 'CHECKOUT_ERROR');
+  }
+});
+
+/**
+ * Get Checkout Status
+ * GET /ucp/checkout/:checkoutId/status
+ * 
+ * Polls checkout status to determine if order was completed.
+ * Use this after giving user a checkout URL to track order completion.
+ */
+router.get('/ucp/checkout/:checkoutId/status', async (req: Request, res: Response) => {
+  try {
+    const { checkoutId } = req.params;
+    
+    logger.info('UCP: Checking checkout status', { checkoutId });
+
+    const client = getWixSdkClient();
+    
+    // Get checkout details
+    const checkoutResponse = await client.checkout.getCheckout(checkoutId);
+    const checkoutData = (checkoutResponse as any).checkout || checkoutResponse;
+    
+    // Determine checkout status
+    const status = checkoutData?.status || 'UNKNOWN';
+    const isCompleted = status === 'COMPLETED' || checkoutData?.completedDate;
+    
+    const result = {
+      checkoutId,
+      status,
+      completed: isCompleted,
+      // Order info if available
+      orderId: checkoutData?.orderId || null,
+      // Price summary
+      totals: {
+        total: {
+          amount: parseFloat(checkoutData?.priceSummary?.total?.amount || '0'),
+          currency: checkoutData?.currency || 'USD',
+          formatted: checkoutData?.priceSummary?.total?.formattedAmount || '$0.00',
+        },
+        itemCount: checkoutData?.lineItems?.length || 0,
+      },
+      // Timestamps
+      createdAt: checkoutData?.createdDate || null,
+      completedAt: checkoutData?.completedDate || null,
+      // Human-readable message for LLM
+      message: isCompleted 
+        ? `✅ Order completed! Order ID: ${checkoutData?.orderId || 'Processing...'}`
+        : '⏳ Payment not yet completed. User should complete checkout at the payment link.',
+    };
+
+    res.json(result);
+  } catch (error: any) {
+    logger.error('UCP: Failed to get checkout status', { 
+      checkoutId: req.params.checkoutId, 
+      error: error.message 
+    });
+    
+    // Checkout may have expired or been completed and cleaned up
+    if (error.message?.includes('not found') || error.code === 'NOT_FOUND') {
+      return res.json({
+        checkoutId: req.params.checkoutId,
+        status: 'EXPIRED_OR_COMPLETED',
+        completed: null,
+        message: 'Checkout not found. It may have been completed or expired. Ask user if they completed payment.',
+      });
+    }
+    
+    return sendError(res, 404, 'Checkout not found or expired', 'CHECKOUT_NOT_FOUND');
   }
 });
 
