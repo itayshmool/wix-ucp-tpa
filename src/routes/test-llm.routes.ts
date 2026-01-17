@@ -832,7 +832,7 @@ router.get('/test/llm', (_req: Request, res: Response) => {
         
         <div class="checkout-box">
           <h4>💳 Complete Payment</h4>
-          <div class="checkout-url" id="checkoutUrl">\${checkoutData.checkoutUrl}</div>
+          <div class="checkout-url" id="checkoutUrl">\${checkoutData.checkoutUrl.replace(/&/g, '&amp;')}</div>
           <div class="checkout-actions">
             <button class="btn-copy" onclick="copyCheckoutUrl()">📋 Copy Link</button>
             <button class="btn-open" onclick="openCheckout()">Open Checkout →</button>
