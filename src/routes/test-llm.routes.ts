@@ -919,18 +919,25 @@ router.get('/test/llm', (_req: Request, res: Response) => {
       const indicator = document.getElementById('waitingIndicator');
       if (indicator) indicator.remove();
       
+      // Determine what to show for order number
+      const orderDisplay = status.orderId 
+        ? \`Order #\${status.orderId}\`
+        : 'Order Confirmed!';
+      
       // Add confirmation message
       addMessage(\`
         <div class="order-confirmed">
           <h3>🎊 Payment Received!</h3>
           <p>Your order has been confirmed</p>
-          <div class="order-number">Order #\${status.orderId || 'Processing...'}</div>
+          <div class="order-number">\${orderDisplay}</div>
           <p>Thank you for shopping with PopStop! 🎉</p>
+          <p style="font-size: 0.9rem; opacity: 0.8; margin-top: 8px;">Check your email for order details.</p>
           <button onclick="clearChat()">Start New Order</button>
         </div>
       \`);
       
       currentCheckoutId = null;
+      currentCheckoutUrl = null;
     }
 
     // Main send message handler
