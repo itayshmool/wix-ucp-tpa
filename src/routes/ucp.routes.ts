@@ -704,7 +704,7 @@ router.get('/ucp/checkout/:checkoutId/status', async (req: Request, res: Respons
     
     // Determine checkout status
     const status = checkoutData?.status || 'UNKNOWN';
-    const isCompleted = status === 'COMPLETED' || checkoutData?.completedDate;
+    const isCompleted = status === 'COMPLETED' || !!checkoutData?.completedDate;
     
     const result = {
       checkoutId,

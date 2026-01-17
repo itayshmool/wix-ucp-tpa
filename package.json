@@ -12,7 +12,10 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src --ext .ts"
+    "lint": "eslint src --ext .ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "keywords": [
     "wix",
@@ -42,6 +45,10 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
-    "tsx": "^4.7.0"
+    "@types/supertest": "^6.0.3",
+    "@vitest/coverage-v8": "^4.0.17",
+    "supertest": "^7.2.2",
+    "tsx": "^4.7.0",
+    "vitest": "^4.0.17"
   }
 }
