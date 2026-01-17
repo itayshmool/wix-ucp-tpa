@@ -830,9 +830,6 @@ router.get('/test/llm', (_req: Request, res: Response) => {
       currentCheckoutId = checkoutData.id;
       currentCheckoutUrl = checkoutData.checkoutUrl; // Store the raw URL
       
-      // For display, we need to escape & for HTML but show it correctly
-      const displayUrl = checkoutData.checkoutUrl;
-      
       const html = \`
         <strong>🎉 Checkout Ready!</strong>
         <p style="margin-top: 8px;">Total: <strong>\${checkoutData.totals?.total?.formatted || '$0.00'}</strong></p>
@@ -846,15 +843,13 @@ router.get('/test/llm', (_req: Request, res: Response) => {
           </div>
         </div>
         
-        <div class="waiting-indicator" id="waitingIndicator">
-          <div class="spinner"></div>
-          <span>Waiting for payment... (auto-detecting)</span>
-          <button onclick="stopPolling()" style="margin-left: 12px; padding: 4px 12px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; color: white; cursor: pointer; font-size: 0.8rem;">Stop</button>
+        <div style="margin-top: 16px; padding: 16px; background: linear-gradient(135deg, rgba(74, 222, 128, 0.15) 0%, rgba(34, 197, 94, 0.15) 100%); border: 1px solid rgba(74, 222, 128, 0.3); border-radius: 12px;">
+          <p style="margin-bottom: 12px; opacity: 0.9;">After completing payment, click below:</p>
+          <button onclick="confirmPayment()" style="width: 100%; padding: 14px 24px; background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%); border: none; border-radius: 8px; color: white; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+            ✅ I Completed Payment
+          </button>
         </div>
       \`;
-
-      // Start polling for payment
-      startPaymentPolling(checkoutData.id);
       
       // After rendering, set the URL using textContent (avoids HTML parsing)
       setTimeout(() => {
@@ -863,6 +858,15 @@ router.get('/test/llm', (_req: Request, res: Response) => {
       }, 0);
       
       return html;
+    }
+    
+    // Confirm payment manually
+    function confirmPayment() {
+      showOrderConfirmation({ 
+        completed: true,
+        orderId: null,
+        orderNumber: null 
+      });
     }
 
     // Copy checkout URL
@@ -880,52 +884,6 @@ router.get('/test/llm', (_req: Request, res: Response) => {
       }
     }
 
-    // Stop polling
-    function stopPolling() {
-      if (pollingInterval) {
-        clearInterval(pollingInterval);
-        pollingInterval = null;
-      }
-      const indicator = document.getElementById('waitingIndicator');
-      if (indicator) {
-        indicator.innerHTML = \`
-          <span>Auto-detect stopped.</span>
-          <button onclick="sendMessage('Check order status')" style="margin-left: 12px; padding: 4px 12px; background: rgba(102,126,234,0.5); border: none; border-radius: 4px; color: white; cursor: pointer;">Check Manually</button>
-        \`;
-      }
-    }
-
-    // Start polling for payment completion
-    function startPaymentPolling(checkoutId) {
-      if (pollingInterval) clearInterval(pollingInterval);
-      
-      let attempts = 0;
-      const maxAttempts = 100; // ~5 minutes at 3 sec intervals
-      
-      pollingInterval = setInterval(async () => {
-        attempts++;
-        
-        if (attempts > maxAttempts) {
-          clearInterval(pollingInterval);
-          const indicator = document.getElementById('waitingIndicator');
-          if (indicator) {
-            indicator.innerHTML = '<span>⏱️ Timeout - <button onclick="sendMessage(\\'Check order status\\')">Check manually</button></span>';
-          }
-          return;
-        }
-        
-        try {
-          const status = await checkOrderStatus(checkoutId);
-          
-          if (status.completed) {
-            clearInterval(pollingInterval);
-            showOrderConfirmation(status);
-          }
-        } catch (e) {
-          console.log('Polling error:', e);
-        }
-      }, 3000);
-    }
 
     // Show order confirmation
     function showOrderConfirmation(status) {
