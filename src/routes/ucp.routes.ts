@@ -702,24 +702,16 @@ router.get('/ucp/checkout/:checkoutId/status', async (req: Request, res: Respons
     const checkoutResponse = await client.checkout.getCheckout(checkoutId);
     const checkoutData = (checkoutResponse as any).checkout || checkoutResponse;
     
-    // DEBUG: Log what Wix actually returns
-    logger.info('UCP: Raw checkout data from Wix', { 
+    // Wix checkout uses a boolean 'completed' field directly
+    logger.info('UCP: Checkout data from Wix', { 
       checkoutId,
-      rawKeys: Object.keys(checkoutData || {}),
-      status: checkoutData?.status,
-      paymentStatus: checkoutData?.paymentStatus,
-      checkoutCompletedDate: checkoutData?.checkoutCompletedDate,
-      completedDate: checkoutData?.completedDate,
-      conversionCurrency: checkoutData?.conversionCurrency,
+      completed: checkoutData?.completed,
+      _id: checkoutData?._id,
     });
     
-    // Determine checkout status - Wix uses paymentStatus field!
-    const paymentStatus = checkoutData?.paymentStatus;
-    const status = paymentStatus || checkoutData?.status || 'UNKNOWN';
-    const isCompleted = paymentStatus === 'PAID' || 
-                        status === 'COMPLETED' || 
-                        !!checkoutData?.checkoutCompletedDate ||
-                        !!checkoutData?.completedDate;
+    // Wix uses 'completed' as a boolean field
+    const isCompleted = checkoutData?.completed === true;
+    const status = isCompleted ? 'COMPLETED' : 'PENDING';
     
     const result = {
       checkoutId,

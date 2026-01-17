@@ -126,10 +126,11 @@ describe('UCP Endpoints', () => {
     const testCheckoutId = 'test-checkout-123';
 
     it('should return checkout status when checkout exists and not completed', async () => {
+      // Wix uses 'completed' as a boolean field, not 'status'
       mockWixClient.checkout.getCheckout.mockResolvedValueOnce({
         checkout: {
           _id: testCheckoutId,
-          status: 'CREATED',
+          completed: false,  // Wix boolean field
           priceSummary: {
             total: { amount: '10.00', formattedAmount: '$10.00' },
           },
@@ -142,18 +143,18 @@ describe('UCP Endpoints', () => {
         .get(`/ucp/checkout/${testCheckoutId}/status`)
         .expect(200);
       expect(response.body.checkoutId).toBe(testCheckoutId);
-      expect(response.body.status).toBe('CREATED');
+      expect(response.body.status).toBe('PENDING');  // We map false -> PENDING
       expect(response.body.completed).toBe(false);
       expect(response.body.message).toContain('not yet completed');
     });
 
-    it('should return completed=true when status is COMPLETED', async () => {
+    it('should return completed=true when checkout is marked completed by Wix', async () => {
+      // Wix uses 'completed' as a boolean field
       mockWixClient.checkout.getCheckout.mockResolvedValueOnce({
         checkout: {
           _id: testCheckoutId,
-          status: 'COMPLETED',
+          completed: true,  // Wix boolean field
           orderId: 'order-456',
-          completedDate: '2024-01-01T00:00:00Z',
         },
       });
 
