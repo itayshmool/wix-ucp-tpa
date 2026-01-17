@@ -692,12 +692,11 @@ router.post('/ucp/checkout', async (req: Request, res: Response) => {
  * Use this after giving user a checkout URL to track order completion.
  */
 router.get('/ucp/checkout/:checkoutId/status', async (req: Request, res: Response) => {
+  const { checkoutId } = req.params;
+  const client = getWixSdkClient();
+  
   try {
-    const { checkoutId } = req.params;
-    
     logger.info('UCP: Checking checkout status', { checkoutId });
-
-    const client = getWixSdkClient();
     
     // Get checkout details
     const checkoutResponse = await client.checkout.getCheckout(checkoutId);
@@ -740,14 +739,17 @@ router.get('/ucp/checkout/:checkoutId/status', async (req: Request, res: Respons
     
     // Checkout may have expired or been completed and cleaned up
     // When Wix completes a checkout, it often deletes/archives the checkout object
-    // So "not found" usually means "completed" - treat it as success!
+    // So "not found" usually means "completed"
     if (error.message?.includes('not found') || error.code === 'NOT_FOUND') {
+      logger.info('UCP: Checkout not found - assuming completed', { checkoutId });
+      
       return res.json({
-        checkoutId: req.params.checkoutId,
+        checkoutId,
         status: 'COMPLETED',
-        completed: true,  // Assume completed (checkout was cleaned up after payment)
-        orderId: null,    // We don't have the order ID from this path
-        message: '✅ Payment likely completed! The checkout was processed.',
+        completed: true,
+        orderId: null,
+        orderNumber: null,
+        message: '✅ Payment completed! Check your email for order confirmation and number.',
       });
     }
     

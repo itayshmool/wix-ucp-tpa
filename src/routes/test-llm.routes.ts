@@ -849,6 +849,7 @@ router.get('/test/llm', (_req: Request, res: Response) => {
         <div class="waiting-indicator" id="waitingIndicator">
           <div class="spinner"></div>
           <span>Waiting for payment... (auto-detecting)</span>
+          <button onclick="stopPolling()" style="margin-left: 12px; padding: 4px 12px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; color: white; cursor: pointer; font-size: 0.8rem;">Stop</button>
         </div>
       \`;
 
@@ -876,6 +877,21 @@ router.get('/test/llm', (_req: Request, res: Response) => {
     function openCheckout() {
       if (currentCheckoutUrl) {
         window.open(currentCheckoutUrl, '_blank');
+      }
+    }
+
+    // Stop polling
+    function stopPolling() {
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+        pollingInterval = null;
+      }
+      const indicator = document.getElementById('waitingIndicator');
+      if (indicator) {
+        indicator.innerHTML = \`
+          <span>Auto-detect stopped.</span>
+          <button onclick="sendMessage('Check order status')" style="margin-left: 12px; padding: 4px 12px; background: rgba(102,126,234,0.5); border: none; border-radius: 4px; color: white; cursor: pointer;">Check Manually</button>
+        \`;
       }
     }
 
@@ -915,14 +931,22 @@ router.get('/test/llm', (_req: Request, res: Response) => {
     function showOrderConfirmation(status) {
       const chatArea = document.getElementById('chatArea');
       
+      // Stop any ongoing polling
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+        pollingInterval = null;
+      }
+      
       // Remove waiting indicator from last message
       const indicator = document.getElementById('waitingIndicator');
       if (indicator) indicator.remove();
       
-      // Determine what to show for order number
-      const orderDisplay = status.orderId 
-        ? \`Order #\${status.orderId}\`
-        : 'Order Confirmed!';
+      // Determine what to show for order number (prefer orderNumber over orderId)
+      const orderDisplay = status.orderNumber 
+        ? \`Order #\${status.orderNumber}\`
+        : status.orderId 
+          ? \`Order #\${status.orderId}\`
+          : 'Order Confirmed!';
       
       // Add confirmation message
       addMessage(\`
