@@ -702,9 +702,24 @@ router.get('/ucp/checkout/:checkoutId/status', async (req: Request, res: Respons
     const checkoutResponse = await client.checkout.getCheckout(checkoutId);
     const checkoutData = (checkoutResponse as any).checkout || checkoutResponse;
     
-    // Determine checkout status
-    const status = checkoutData?.status || 'UNKNOWN';
-    const isCompleted = status === 'COMPLETED' || !!checkoutData?.completedDate;
+    // DEBUG: Log what Wix actually returns
+    logger.info('UCP: Raw checkout data from Wix', { 
+      checkoutId,
+      rawKeys: Object.keys(checkoutData || {}),
+      status: checkoutData?.status,
+      paymentStatus: checkoutData?.paymentStatus,
+      checkoutCompletedDate: checkoutData?.checkoutCompletedDate,
+      completedDate: checkoutData?.completedDate,
+      conversionCurrency: checkoutData?.conversionCurrency,
+    });
+    
+    // Determine checkout status - Wix uses paymentStatus field!
+    const paymentStatus = checkoutData?.paymentStatus;
+    const status = paymentStatus || checkoutData?.status || 'UNKNOWN';
+    const isCompleted = paymentStatus === 'PAID' || 
+                        status === 'COMPLETED' || 
+                        !!checkoutData?.checkoutCompletedDate ||
+                        !!checkoutData?.completedDate;
     
     const result = {
       checkoutId,
