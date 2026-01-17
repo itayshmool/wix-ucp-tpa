@@ -822,9 +822,16 @@ router.get('/test/llm', (_req: Request, res: Response) => {
       return html;
     }
 
+    // Store checkout URL in a variable (avoids HTML entity issues)
+    let currentCheckoutUrl = null;
+
     // Render checkout
     function renderCheckout(checkoutData) {
       currentCheckoutId = checkoutData.id;
+      currentCheckoutUrl = checkoutData.checkoutUrl; // Store the raw URL
+      
+      // For display, we need to escape & for HTML but show it correctly
+      const displayUrl = checkoutData.checkoutUrl;
       
       const html = \`
         <strong>🎉 Checkout Ready!</strong>
@@ -832,7 +839,7 @@ router.get('/test/llm', (_req: Request, res: Response) => {
         
         <div class="checkout-box">
           <h4>💳 Complete Payment</h4>
-          <div class="checkout-url" id="checkoutUrl">\${checkoutData.checkoutUrl.replace(/&/g, '&amp;')}</div>
+          <div class="checkout-url" id="checkoutUrl"></div>
           <div class="checkout-actions">
             <button class="btn-copy" onclick="copyCheckoutUrl()">📋 Copy Link</button>
             <button class="btn-open" onclick="openCheckout()">Open Checkout →</button>
@@ -848,23 +855,27 @@ router.get('/test/llm', (_req: Request, res: Response) => {
       // Start polling for payment
       startPaymentPolling(checkoutData.id);
       
+      // After rendering, set the URL using textContent (avoids HTML parsing)
+      setTimeout(() => {
+        const urlEl = document.getElementById('checkoutUrl');
+        if (urlEl) urlEl.textContent = currentCheckoutUrl;
+      }, 0);
+      
       return html;
     }
 
     // Copy checkout URL
     function copyCheckoutUrl() {
-      const url = document.getElementById('checkoutUrl')?.textContent;
-      if (url) {
-        navigator.clipboard.writeText(url);
+      if (currentCheckoutUrl) {
+        navigator.clipboard.writeText(currentCheckoutUrl);
         alert('Checkout URL copied!');
       }
     }
 
     // Open checkout in new tab
     function openCheckout() {
-      const url = document.getElementById('checkoutUrl')?.textContent;
-      if (url) {
-        window.open(url, '_blank');
+      if (currentCheckoutUrl) {
+        window.open(currentCheckoutUrl, '_blank');
       }
     }
 
