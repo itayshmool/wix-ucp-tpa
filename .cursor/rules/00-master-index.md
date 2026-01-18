@@ -63,7 +63,7 @@ A Wix TPA that:
 | 9 | Fulfillment Extension | Webhook callbacks to agents | 🟡 Medium | ✅ Complete |
 | 10 | Discounts Extension | Coupon code support | 🟡 Medium | ✅ Complete |
 | 11 | Payment Handlers | Mint payment instruments | 🔴 High | ✅ Complete |
-| 12 | Complete Checkout | Server-side order creation | 🔴 High | ⬜ Pending |
+| 12 | Complete Checkout | Server-side order creation | 🔴 High | ✅ Complete |
 | 13 | Protocol Bindings | MCP + A2A integration | 🟡 Medium | ⬜ Pending |
 | 14 | Identity & Consent | Identity linking + GDPR | 🟢 Low | ⬜ Pending |
 
@@ -161,7 +161,7 @@ identity_linking      # Phase 14: Cross-platform identity
 ✅ Step 4: Create Checkout
 ✅ Step 5: Update Checkout
 ✅ Step 6: Mint Instrument (Phase 11)
-⬜ Step 7: Complete Checkout (Phase 12)
+✅ Step 7: Complete Checkout (Phase 12)
 ✅ Step 8: Webhook Simulation (Phase 9)
 ```
 
