@@ -1,709 +1,179 @@
-# Phase 13: Protocol Bindings (MCP, A2A)
-
-## Context
-Protocol bindings allow AI agents to interact with UCP using their native protocols. MCP (Model Context Protocol) enables Claude and other LLMs to use UCP as tools. A2A (Agent-to-Agent) enables autonomous agent communication.
-
-## Reference Documentation
-- MCP Specification: https://modelcontextprotocol.io/
-- MCP Binding: https://ucp.dev/specification/checkout/mcp-binding
-- A2A Binding: https://ucp.dev/specification/checkout/a2a-binding
-
-## Goal
-Expose UCP capabilities through MCP and A2A protocol bindings.
-
-## Priority: 🟡 Medium | Complexity: 🔴 High | Duration: 2-3 weeks
-
----
-
-## Sub-Phases
-
-### Phase 13A: MCP Binding (1-2 weeks)
-Enable UCP as MCP tools for Claude and compatible LLMs.
-
-### Phase 13B: A2A Binding (1 week)
-Enable agent-to-agent protocol for autonomous commerce.
-
----
-
-# Phase 13A: MCP Binding
+# Phase 13: Protocol Bindings ✅ COMPLETE
 
 ## Overview
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                           MCP Architecture                               │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│  ┌─────────────┐        ┌─────────────────┐        ┌─────────────────┐ │
-│  │  Claude /   │        │   MCP Server    │        │   UCP TPA       │ │
-│  │  LLM Agent  │◄──────►│   (this)        │◄──────►│   REST API      │ │
-│  └─────────────┘  MCP   └─────────────────┘  HTTP  └─────────────────┘ │
-│                                                                         │
-│  Tools exposed:                                                         │
-│  - browse_products                                                      │
-│  - search_products                                                      │
-│  - add_to_cart                                                          │
-│  - view_cart                                                            │
-│  - create_checkout                                                      │
-│  - complete_purchase                                                    │
-│  - get_order_status                                                     │
-│                                                                         │
-└─────────────────────────────────────────────────────────────────────────┘
-```
+Implemented MCP (Model Context Protocol) and A2A (Agent-to-Agent) bindings to expose UCP operations as tools for AI frameworks and enable multi-agent coordination.
 
-## Tasks
+## MCP (Model Context Protocol)
 
-### 1. Install MCP SDK
+### Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/mcp/tools` | List all available tools |
+| GET | `/mcp/tools/:name` | Get specific tool definition |
+| GET | `/mcp/openapi` | OpenAPI schema for tools |
+| POST | `/mcp/call` | Execute a single tool |
+| POST | `/mcp/batch` | Execute multiple tools |
+| POST | `/mcp/validate` | Validate tool arguments |
+
+### Available Tools (19)
+
+**Discovery:**
+- `ucp_discover` - Get merchant profile and capabilities
+
+**Products:**
+- `ucp_search_products` - Search product catalog
+- `ucp_get_product` - Get product details
+
+**Cart:**
+- `ucp_create_cart` - Create cart with items
+- `ucp_get_cart` - Get cart contents
+- `ucp_add_to_cart` - Add item to cart
+- `ucp_update_cart_item` - Update item quantity
+- `ucp_clear_cart` - Clear cart
+
+**Checkout:**
+- `ucp_create_checkout` - Create checkout session
+- `ucp_get_checkout` - Get checkout status
+- `ucp_apply_coupon` - Apply discount code
+- `ucp_remove_coupon` - Remove discount
+
+**Payment:**
+- `ucp_list_payment_handlers` - List payment methods
+- `ucp_mint_instrument` - Create payment instrument
+- `ucp_complete_checkout` - Complete and create order
+
+**Orders:**
+- `ucp_list_orders` - List orders
+- `ucp_get_order` - Get order details
+- `ucp_get_order_fulfillments` - Get shipping status
+
+**Webhooks:**
+- `ucp_register_webhook` - Subscribe to events
+
+### Example: Tool Call
 
 ```bash
-npm install @modelcontextprotocol/sdk
-```
-
-### 2. Create MCP Server (src/mcp/server.ts)
-
-```typescript
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-  Tool,
-} from '@modelcontextprotocol/sdk/types.js';
-import { logger } from '../utils/logger.js';
-
-// Import UCP tools
-import { browseProducts, searchProducts } from './tools/products.js';
-import { addToCart, viewCart, clearCart } from './tools/cart.js';
-import { createCheckout, completeCheckout } from './tools/checkout.js';
-import { getOrderStatus } from './tools/orders.js';
-
-const UCP_BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
-
-export class UCPMCPServer {
-  private server: Server;
-  
-  constructor() {
-    this.server = new Server(
-      {
-        name: 'ucp-commerce',
-        version: '1.0.0',
-      },
-      {
-        capabilities: {
-          tools: {},
-        },
-      }
-    );
-    
-    this.setupHandlers();
-  }
-  
-  private setupHandlers(): void {
-    // List available tools
-    this.server.setRequestHandler(ListToolsRequestSchema, async () => {
-      return {
-        tools: this.getTools(),
-      };
-    });
-    
-    // Handle tool calls
-    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      const { name, arguments: args } = request.params;
-      
-      logger.info('MCP tool called', { tool: name, args });
-      
-      try {
-        const result = await this.executeTool(name, args);
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(result, null, 2),
-            },
-          ],
-        };
-      } catch (error: any) {
-        logger.error('MCP tool error', { tool: name, error: error.message });
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify({ error: error.message }),
-            },
-          ],
-          isError: true,
-        };
-      }
-    });
-  }
-  
-  private getTools(): Tool[] {
-    return [
-      {
-        name: 'browse_products',
-        description: 'Browse products from the Pop Stop store. Returns a list of available products with prices and images.',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            limit: {
-              type: 'number',
-              description: 'Maximum number of products to return (default 20, max 100)',
-            },
-            category: {
-              type: 'string',
-              description: 'Filter by category name',
-            },
-          },
-        },
-      },
-      {
-        name: 'search_products',
-        description: 'Search for products by name or keyword.',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            query: {
-              type: 'string',
-              description: 'Search query',
-            },
-            limit: {
-              type: 'number',
-              description: 'Maximum number of results',
-            },
-          },
-          required: ['query'],
-        },
-      },
-      {
-        name: 'add_to_cart',
-        description: 'Add a product to the shopping cart.',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            productId: {
-              type: 'string',
-              description: 'The product ID to add',
-            },
-            quantity: {
-              type: 'number',
-              description: 'Quantity to add (default 1)',
-            },
-          },
-          required: ['productId'],
-        },
-      },
-      {
-        name: 'view_cart',
-        description: 'View the current shopping cart contents and totals.',
-        inputSchema: {
-          type: 'object',
-          properties: {},
-        },
-      },
-      {
-        name: 'clear_cart',
-        description: 'Remove all items from the shopping cart.',
-        inputSchema: {
-          type: 'object',
-          properties: {},
-        },
-      },
-      {
-        name: 'create_checkout',
-        description: 'Create a checkout from the current cart. Returns a checkout ID and payment link.',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            buyerEmail: {
-              type: 'string',
-              description: 'Buyer email address (optional)',
-            },
-          },
-        },
-      },
-      {
-        name: 'complete_purchase',
-        description: 'Complete a purchase using a payment instrument. For testing, use the sandbox handler.',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            checkoutId: {
-              type: 'string',
-              description: 'The checkout ID to complete',
-            },
-            paymentHandler: {
-              type: 'string',
-              description: 'Payment handler ID (e.g., "com.test.sandbox")',
-              default: 'com.test.sandbox',
-            },
-          },
-          required: ['checkoutId'],
-        },
-      },
-      {
-        name: 'get_order_status',
-        description: 'Get the status of an order by order ID.',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            orderId: {
-              type: 'string',
-              description: 'The order ID to look up',
-            },
-          },
-          required: ['orderId'],
-        },
-      },
-    ];
-  }
-  
-  private async executeTool(name: string, args: any): Promise<any> {
-    switch (name) {
-      case 'browse_products':
-        return browseProducts(UCP_BASE_URL, args);
-      case 'search_products':
-        return searchProducts(UCP_BASE_URL, args);
-      case 'add_to_cart':
-        return addToCart(UCP_BASE_URL, args);
-      case 'view_cart':
-        return viewCart(UCP_BASE_URL);
-      case 'clear_cart':
-        return clearCart(UCP_BASE_URL);
-      case 'create_checkout':
-        return createCheckout(UCP_BASE_URL, args);
-      case 'complete_purchase':
-        return completeCheckout(UCP_BASE_URL, args);
-      case 'get_order_status':
-        return getOrderStatus(UCP_BASE_URL, args);
-      default:
-        throw new Error(`Unknown tool: ${name}`);
-    }
-  }
-  
-  async start(): Promise<void> {
-    const transport = new StdioServerTransport();
-    await this.server.connect(transport);
-    logger.info('MCP server started');
-  }
-}
-
-// CLI entry point
-if (import.meta.url === `file://${process.argv[1]}`) {
-  const server = new UCPMCPServer();
-  server.start().catch(console.error);
+POST /mcp/call
+{
+  "tool": "ucp_search_products",
+  "arguments": { "query": "energy drink", "limit": 5 },
+  "requestId": "req-123"
 }
 ```
 
-### 3. Create MCP Tools (src/mcp/tools/)
-
-#### Products Tools (src/mcp/tools/products.ts)
-```typescript
-export async function browseProducts(baseUrl: string, args: { limit?: number; category?: string }) {
-  const params = new URLSearchParams();
-  if (args.limit) params.set('limit', args.limit.toString());
-  if (args.category) params.set('category', args.category);
-  
-  const response = await fetch(`${baseUrl}/ucp/products?${params}`);
-  const data = await response.json();
-  
-  return {
-    products: data.products.map((p: any) => ({
-      id: p.id,
-      name: p.name,
-      price: p.price.formatted,
-      available: p.available,
-      image: p.images?.[0]?.url,
-    })),
-    total: data.pagination.total,
-  };
-}
-
-export async function searchProducts(baseUrl: string, args: { query: string; limit?: number }) {
-  const params = new URLSearchParams();
-  params.set('search', args.query);
-  if (args.limit) params.set('limit', args.limit.toString());
-  
-  const response = await fetch(`${baseUrl}/ucp/products?${params}`);
-  const data = await response.json();
-  
-  return {
-    query: args.query,
-    results: data.products.map((p: any) => ({
-      id: p.id,
-      name: p.name,
-      price: p.price.formatted,
-      available: p.available,
-    })),
-    count: data.products.length,
-  };
-}
-```
-
-#### Cart Tools (src/mcp/tools/cart.ts)
-```typescript
-export async function addToCart(baseUrl: string, args: { productId: string; quantity?: number }) {
-  const response = await fetch(`${baseUrl}/ucp/cart`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      items: [{ productId: args.productId, quantity: args.quantity || 1 }],
-    }),
-  });
-  
-  const cart = await response.json();
-  
-  return {
-    success: true,
-    cart: {
-      itemCount: cart.totals.itemCount,
-      total: cart.totals.total.formatted,
-    },
-  };
-}
-
-export async function viewCart(baseUrl: string) {
-  const response = await fetch(`${baseUrl}/ucp/cart`);
-  const cart = await response.json();
-  
-  return {
-    items: cart.items.map((i: any) => ({
-      name: i.name,
-      quantity: i.quantity,
-      price: i.price.formatted,
-    })),
-    totals: {
-      subtotal: cart.totals.subtotal.formatted,
-      total: cart.totals.total.formatted,
-      itemCount: cart.totals.itemCount,
-    },
-  };
-}
-
-export async function clearCart(baseUrl: string) {
-  await fetch(`${baseUrl}/ucp/cart`, { method: 'DELETE' });
-  return { success: true, message: 'Cart cleared' };
-}
-```
-
-#### Checkout Tools (src/mcp/tools/checkout.ts)
-```typescript
-export async function createCheckout(baseUrl: string, args: { buyerEmail?: string }) {
-  const response = await fetch(`${baseUrl}/ucp/checkout`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      buyerInfo: args.buyerEmail ? { email: args.buyerEmail } : undefined,
-    }),
-  });
-  
-  const checkout = await response.json();
-  
-  return {
-    checkoutId: checkout.id,
-    checkoutUrl: checkout.checkoutUrl,
-    total: checkout.totals.total.formatted,
-    message: 'Checkout created. User can pay at checkoutUrl, or use complete_purchase for server-side payment.',
-  };
-}
-
-export async function completeCheckout(baseUrl: string, args: { checkoutId: string; paymentHandler?: string }) {
-  const handler = args.paymentHandler || 'com.test.sandbox';
-  
-  // 1. Mint instrument
-  const mintResponse = await fetch(`${baseUrl}/ucp/payment-handlers/${handler}/mint`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ checkoutId: args.checkoutId }),
-  });
-  
-  const mintResult = await mintResponse.json();
-  if (!mintResult.success) {
-    return { success: false, error: mintResult.error };
+Response:
+```json
+{
+  "success": true,
+  "requestId": "req-123",
+  "result": {
+    "products": [...],
+    "total": 5
   }
-  
-  // 2. Complete checkout
-  const completeResponse = await fetch(`${baseUrl}/ucp/checkout/${args.checkoutId}/complete`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ instrumentId: mintResult.instrument.id }),
-  });
-  
-  const result = await completeResponse.json();
-  
-  if (result.status === 'completed') {
-    return {
-      success: true,
-      order: {
-        id: result.order.id,
-        number: result.order.number,
-        total: result.order.totals.total.formatted,
-      },
-      message: `Order ${result.order.number} created successfully!`,
-    };
-  }
-  
-  return {
-    success: false,
-    status: result.status,
-    error: result.error,
-  };
 }
 ```
 
-#### Orders Tools (src/mcp/tools/orders.ts)
-```typescript
-export async function getOrderStatus(baseUrl: string, args: { orderId: string }) {
-  const response = await fetch(`${baseUrl}/ucp/orders/${args.orderId}`);
-  
-  if (!response.ok) {
-    return { error: 'Order not found' };
-  }
-  
-  const order = await response.json();
-  
-  return {
-    id: order.id,
-    number: order.number,
-    status: order.status,
-    paymentStatus: order.paymentStatus,
-    fulfillmentStatus: order.fulfillmentStatus,
-    total: order.totals.total.formatted,
-    items: order.items.map((i: any) => ({
-      name: i.name,
-      quantity: i.quantity,
-    })),
-  };
-}
-```
+## A2A (Agent-to-Agent)
 
-### 4. Create MCP Entry Point (src/mcp/index.ts)
+### Endpoints
 
-```typescript
-#!/usr/bin/env node
-import { UCPMCPServer } from './server.js';
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/a2a/agent` | Get self agent card |
+| GET | `/a2a/agents` | List all known agents |
+| GET | `/a2a/agents/:id` | Get specific agent |
+| POST | `/a2a/agents` | Register external agent |
+| DELETE | `/a2a/agents/:id` | Unregister agent |
+| POST | `/a2a/resolve` | Find agents by capability |
+| POST | `/a2a/handoff` | Create transaction handoff |
+| GET | `/a2a/handoff/:id` | Get handoff details |
+| GET | `/a2a/handoffs` | List handoffs |
+| POST | `/a2a/handoff/:id/accept` | Accept/reject handoff |
+| POST | `/a2a/handoff/:id/complete` | Complete handoff |
+| GET | `/a2a/stats` | A2A statistics |
 
-const server = new UCPMCPServer();
-server.start().catch(console.error);
-```
-
-### 5. Add MCP to package.json
+### Agent Card
 
 ```json
 {
-  "bin": {
-    "ucp-mcp": "./dist/mcp/index.js"
+  "id": "ucp-wix-agent",
+  "name": "Pop Stop Drink UCP Agent",
+  "version": "1.0.0",
+  "capabilities": ["catalog_search", "cart_management", "checkout", ...],
+  "endpoints": {
+    "base": "https://wix-ucp-tpa.onrender.com",
+    "mcp": "https://wix-ucp-tpa.onrender.com/mcp",
+    "a2a": "https://wix-ucp-tpa.onrender.com/a2a"
   },
-  "scripts": {
-    "mcp": "tsx src/mcp/index.ts"
-  }
+  "trust": { "level": "verified" }
 }
 ```
 
----
+### Transaction Handoff
 
-# Phase 13B: A2A Binding
+Enables one agent to delegate a transaction to another:
 
-## Overview
-
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                           A2A Architecture                               │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│  ┌─────────────┐        ┌─────────────────┐        ┌─────────────────┐ │
-│  │   Agent A   │◄──────►│  A2A Registry   │◄──────►│   Agent B       │ │
-│  │  (Buyer)    │  A2A   │  (this)         │  A2A   │  (Seller/UCP)   │ │
-│  └─────────────┘        └─────────────────┘        └─────────────────┘ │
-│                                                                         │
-│  Message types:                                                         │
-│  - commerce.discover                                                    │
-│  - commerce.checkout.create                                             │
-│  - commerce.checkout.update                                             │
-│  - commerce.checkout.complete                                           │
-│  - commerce.order.status                                                │
-│                                                                         │
-└─────────────────────────────────────────────────────────────────────────┘
-```
-
-## Tasks
-
-### 1. Create A2A Types (src/a2a/types.ts)
-
-```typescript
-export interface A2AAgent {
-  id: string;
-  name: string;
-  description?: string;
-  capabilities: string[];
-  endpoint: string;
-  publicKey?: string;  // For message signing
-}
-
-export interface A2AMessage {
-  id: string;
-  type: string;
-  from: string;  // Agent ID
-  to: string;    // Agent ID
-  timestamp: string;
-  payload: unknown;
-  signature?: string;
-}
-
-export interface A2AResponse {
-  messageId: string;
-  status: 'success' | 'error';
-  payload?: unknown;
-  error?: {
-    code: string;
-    message: string;
-  };
+```bash
+POST /a2a/handoff
+{
+  "targetAgentId": "payment-agent",
+  "type": "checkout",
+  "context": { "checkoutId": "checkout-123" },
+  "intent": "Complete the payment",
+  "permissions": ["read", "execute"],
+  "ttlSeconds": 3600
 }
 ```
 
-### 2. Create A2A Handler (src/a2a/handler.ts)
+Handoff Flow:
+1. Source agent creates handoff → status: `pending`
+2. Target agent accepts → status: `accepted`
+3. Target agent completes → status: `completed`
 
-```typescript
-import { A2AMessage, A2AResponse } from './types.js';
-import { logger } from '../utils/logger.js';
+## Discovery Integration
 
-export async function handleA2AMessage(message: A2AMessage): Promise<A2AResponse> {
-  logger.info('A2A message received', { 
-    type: message.type, 
-    from: message.from 
-  });
-  
-  switch (message.type) {
-    case 'commerce.discover':
-      return handleDiscovery(message);
-    case 'commerce.checkout.create':
-      return handleCheckoutCreate(message);
-    case 'commerce.checkout.complete':
-      return handleCheckoutComplete(message);
-    case 'commerce.order.status':
-      return handleOrderStatus(message);
-    default:
-      return {
-        messageId: message.id,
-        status: 'error',
-        error: { code: 'UNKNOWN_TYPE', message: `Unknown message type: ${message.type}` },
-      };
-  }
-}
-
-async function handleDiscovery(message: A2AMessage): Promise<A2AResponse> {
-  // Return UCP discovery info
-  return {
-    messageId: message.id,
-    status: 'success',
-    payload: {
-      protocol: 'ucp',
-      version: '1.0',
-      capabilities: ['checkout', 'orders', 'fulfillment'],
-      // ... discovery data
-    },
-  };
-}
-// ... other handlers
-```
-
-### 3. Create A2A Endpoint (src/routes/a2a.routes.ts)
-
-```typescript
-import { Router, Request, Response } from 'express';
-import { handleA2AMessage } from '../a2a/handler.js';
-
-const router = Router();
-
-/**
- * A2A Message Endpoint
- * POST /a2a/messages
- */
-router.post('/messages', async (req: Request, res: Response) => {
-  try {
-    const message = req.body;
-    const response = await handleA2AMessage(message);
-    res.json(response);
-  } catch (error: any) {
-    res.status(500).json({
-      status: 'error',
-      error: { code: 'INTERNAL_ERROR', message: error.message },
-    });
-  }
-});
-
-export default router;
-```
-
----
-
-## File Structure
-
-```
-src/
-├── mcp/
-│   ├── index.ts           # MCP entry point
-│   ├── server.ts          # MCP server
-│   └── tools/
-│       ├── products.ts    # Product tools
-│       ├── cart.ts        # Cart tools
-│       ├── checkout.ts    # Checkout tools
-│       └── orders.ts      # Order tools
-├── a2a/
-│   ├── types.ts           # A2A types
-│   ├── handler.ts         # Message handler
-│   └── registry.ts        # Agent registry
-└── routes/
-    └── a2a.routes.ts      # A2A endpoints
-```
-
----
-
-## Acceptance Criteria
-
-### Phase 13A (MCP)
-- [ ] MCP server starts and connects via stdio
-- [ ] All 7 tools implemented and working
-- [ ] browse_products returns product list
-- [ ] add_to_cart adds items successfully
-- [ ] create_checkout creates checkout
-- [ ] complete_purchase creates order
-- [ ] Can test with Claude Desktop MCP
-
-### Phase 13B (A2A)
-- [ ] A2A endpoint accepts messages
-- [ ] Discovery message returns UCP info
-- [ ] Checkout messages create/complete checkouts
-- [ ] Agent registration works
-- [ ] Message signing (optional)
-
----
-
-## Testing with Claude Desktop
-
-Add to Claude Desktop MCP config (`~/.config/claude/mcp.json`):
+UCP discovery now includes bindings:
 
 ```json
 {
-  "mcpServers": {
-    "ucp-commerce": {
-      "command": "node",
-      "args": ["/path/to/wix-ucp-tpa/dist/mcp/index.js"],
-      "env": {
-        "BASE_URL": "https://wix-ucp-tpa.onrender.com"
-      }
+  "protocol": "ucp",
+  "bindings": {
+    "mcp": {
+      "tools": "https://wix-ucp-tpa.onrender.com/mcp/tools",
+      "call": "https://wix-ucp-tpa.onrender.com/mcp/call",
+      "openapi": "https://wix-ucp-tpa.onrender.com/mcp/openapi"
+    },
+    "a2a": {
+      "agent": "https://wix-ucp-tpa.onrender.com/a2a/agent",
+      "agents": "https://wix-ucp-tpa.onrender.com/a2a/agents",
+      "handoff": "https://wix-ucp-tpa.onrender.com/a2a/handoff",
+      "resolve": "https://wix-ucp-tpa.onrender.com/a2a/resolve"
     }
   }
 }
 ```
 
-Then ask Claude: "Browse products from the Pop Stop store"
+## Files
 
----
+- `src/services/mcp/mcp.types.ts` - MCP type definitions
+- `src/services/mcp/mcp.service.ts` - MCP tool execution
+- `src/routes/mcp.routes.ts` - MCP API endpoints
+- `src/services/a2a/a2a.types.ts` - A2A type definitions
+- `src/services/a2a/a2a.service.ts` - A2A handoff management
+- `src/routes/a2a.routes.ts` - A2A API endpoints
+- `tests/ucp-phase13-bindings.test.ts` - 31 tests
 
-## Security Considerations
+## Tests
 
-- MCP runs locally, no auth needed
-- A2A should verify message signatures
-- Rate limit A2A endpoints
-- Validate agent IDs against registry
-- Log all inter-agent messages
+31 comprehensive tests covering:
+- MCP tool discovery (list, get, openapi)
+- MCP tool execution (validation, errors)
+- MCP batch execution
+- A2A agent discovery
+- A2A agent registration
+- A2A handoff creation
+- A2A handoff acceptance/rejection
+- A2A handoff completion
+- Discovery integration
