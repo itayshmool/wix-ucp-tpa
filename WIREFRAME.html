@@ -1,0 +1,1112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UCP Test UI Wireframe - New Capabilities</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    :root {
+      --bg: #0a0a0f;
+      --surface: #12121a;
+      --surface-2: #1a1a24;
+      --border: #2a2a3a;
+      --text: #e8e8ec;
+      --text-muted: #8888a0;
+      --accent: #6366f1;
+      --accent-2: #8b5cf6;
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+    }
+    
+    body {
+      font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 2rem;
+    }
+    
+    h1 {
+      text-align: center;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    
+    .subtitle {
+      text-align: center;
+      color: var(--text-muted);
+      margin-bottom: 3rem;
+    }
+    
+    /* Wireframe Container */
+    .wireframe-container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    
+    .wireframe-section {
+      margin-bottom: 4rem;
+    }
+    
+    .wireframe-title {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    
+    .wireframe-title .badge {
+      font-size: 0.75rem;
+      background: var(--accent);
+      color: white;
+      padding: 0.25rem 0.75rem;
+      border-radius: 999px;
+    }
+    
+    .wireframe-desc {
+      color: var(--text-muted);
+      margin-bottom: 1.5rem;
+    }
+    
+    /* Screen Mockup */
+    .screen {
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+    
+    .screen-header {
+      background: var(--surface-2);
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .screen-title {
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .screen-nav {
+      display: flex;
+      gap: 1rem;
+    }
+    
+    .nav-item {
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .nav-item:hover {
+      background: var(--border);
+    }
+    
+    .nav-item.active {
+      background: var(--accent);
+      color: white;
+    }
+    
+    .nav-item.new {
+      position: relative;
+    }
+    
+    .nav-item.new::after {
+      content: 'NEW';
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      font-size: 0.6rem;
+      background: var(--success);
+      color: white;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    
+    .screen-body {
+      padding: 1.5rem;
+      min-height: 400px;
+    }
+    
+    /* Component Styles */
+    .placeholder {
+      background: repeating-linear-gradient(
+        45deg,
+        var(--surface-2),
+        var(--surface-2) 10px,
+        var(--border) 10px,
+        var(--border) 20px
+      );
+      border: 2px dashed var(--border);
+      border-radius: 8px;
+      padding: 2rem;
+      text-align: center;
+      color: var(--text-muted);
+    }
+    
+    .card {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem;
+    }
+    
+    .card-title {
+      font-weight: 600;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .btn {
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      color: white;
+    }
+    
+    .btn-success {
+      background: var(--success);
+      color: white;
+    }
+    
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    
+    .input {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 0.875rem;
+    }
+    
+    .input::placeholder {
+      color: var(--text-muted);
+    }
+    
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+    
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+    }
+    
+    .flex {
+      display: flex;
+      gap: 1rem;
+    }
+    
+    .flex-between {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    /* Specific Components */
+    .order-card {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+    
+    .order-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.75rem;
+    }
+    
+    .order-id {
+      font-family: monospace;
+      color: var(--accent);
+    }
+    
+    .order-status {
+      padding: 0.25rem 0.75rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    
+    .status-paid {
+      background: rgba(34, 197, 94, 0.2);
+      color: var(--success);
+    }
+    
+    .status-shipped {
+      background: rgba(99, 102, 241, 0.2);
+      color: var(--accent);
+    }
+    
+    .status-delivered {
+      background: rgba(139, 92, 246, 0.2);
+      color: var(--accent-2);
+    }
+    
+    .order-items {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+    }
+    
+    .order-total {
+      font-weight: 600;
+    }
+    
+    /* Payment Handler */
+    .payment-option {
+      background: var(--surface-2);
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .payment-option:hover {
+      border-color: var(--accent);
+    }
+    
+    .payment-option.selected {
+      border-color: var(--accent);
+      background: rgba(99, 102, 241, 0.1);
+    }
+    
+    .payment-option-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .payment-icon {
+      width: 40px;
+      height: 40px;
+      background: var(--bg);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+    }
+    
+    .payment-name {
+      font-weight: 600;
+    }
+    
+    .payment-desc {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+    
+    /* Coupon */
+    .coupon-input {
+      display: flex;
+      gap: 0.5rem;
+    }
+    
+    .coupon-applied {
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid var(--success);
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .coupon-code {
+      font-family: monospace;
+      color: var(--success);
+      font-weight: 600;
+    }
+    
+    .coupon-discount {
+      color: var(--success);
+    }
+    
+    /* Fulfillment Timeline */
+    .timeline {
+      position: relative;
+      padding-left: 2rem;
+    }
+    
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 0.5rem;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: var(--border);
+    }
+    
+    .timeline-item {
+      position: relative;
+      padding-bottom: 1.5rem;
+    }
+    
+    .timeline-item::before {
+      content: '';
+      position: absolute;
+      left: -1.5rem;
+      top: 0.25rem;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--border);
+    }
+    
+    .timeline-item.completed::before {
+      background: var(--success);
+    }
+    
+    .timeline-item.current::before {
+      background: var(--accent);
+      box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.3);
+    }
+    
+    .timeline-title {
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+    
+    .timeline-date {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+    
+    /* Instrument Card */
+    .instrument-card {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .instrument-card::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -50%;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle, rgba(99, 102, 241, 0.1) 0%, transparent 70%);
+    }
+    
+    .instrument-brand {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+    }
+    
+    .instrument-number {
+      font-family: monospace;
+      font-size: 1.25rem;
+      letter-spacing: 0.25rem;
+      margin-bottom: 1rem;
+    }
+    
+    .instrument-footer {
+      display: flex;
+      justify-content: space-between;
+    }
+    
+    .instrument-label {
+      font-size: 0.625rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+    
+    .instrument-value {
+      font-size: 0.875rem;
+    }
+    
+    /* Webhook Panel */
+    .webhook-panel {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    
+    .webhook-header {
+      padding: 1rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .webhook-list {
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    
+    .webhook-item {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.875rem;
+    }
+    
+    .webhook-item:last-child {
+      border-bottom: none;
+    }
+    
+    .webhook-event {
+      font-family: monospace;
+      color: var(--accent);
+    }
+    
+    .webhook-url {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+    }
+    
+    /* Annotations */
+    .annotation {
+      background: var(--warning);
+      color: black;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      position: absolute;
+      white-space: nowrap;
+    }
+    
+    .annotation::after {
+      content: '';
+      position: absolute;
+      border: 6px solid transparent;
+    }
+    
+    .feature-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+    
+    .feature-tag {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      font-size: 0.875rem;
+    }
+    
+    .feature-tag.new {
+      border-color: var(--success);
+      color: var(--success);
+    }
+    
+    /* Legend */
+    .legend {
+      display: flex;
+      gap: 2rem;
+      justify-content: center;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+    }
+    
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.875rem;
+    }
+    
+    .legend-color {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+    }
+    
+    .legend-existing {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+    }
+    
+    .legend-new {
+      background: rgba(34, 197, 94, 0.2);
+      border: 1px solid var(--success);
+    }
+    
+    .legend-highlight {
+      background: rgba(99, 102, 241, 0.2);
+      border: 1px solid var(--accent);
+    }
+  </style>
+</head>
+<body>
+  <h1>🎨 UCP Test UI Wireframe</h1>
+  <p class="subtitle">New Capabilities from Phases 7-11</p>
+  
+  <div class="legend">
+    <div class="legend-item">
+      <div class="legend-color legend-existing"></div>
+      <span>Existing</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color legend-new"></div>
+      <span>New (Phase 7-11)</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color legend-highlight"></div>
+      <span>Interactive</span>
+    </div>
+  </div>
+  
+  <div class="wireframe-container">
+    
+    <!-- SCREEN 1: Main Navigation with Orders Tab -->
+    <div class="wireframe-section">
+      <h2 class="wireframe-title">
+        <span>1️⃣ Main Layout with New Navigation</span>
+        <span class="badge">Phase 7</span>
+      </h2>
+      <p class="wireframe-desc">Added "Orders" tab to main navigation for viewing order history and fulfillment status.</p>
+      
+      <div class="screen">
+        <div class="screen-header">
+          <div class="screen-title">🛒 PopStop Drinks</div>
+          <div class="screen-nav">
+            <div class="nav-item active">Products</div>
+            <div class="nav-item">Cart</div>
+            <div class="nav-item new">Orders</div>
+            <div class="nav-item new">Webhooks</div>
+          </div>
+        </div>
+        <div class="screen-body">
+          <div class="grid-2">
+            <div>
+              <h3 style="margin-bottom: 1rem;">📦 Your Orders</h3>
+              
+              <div class="order-card">
+                <div class="order-header">
+                  <span class="order-id">#ORD-2026-001</span>
+                  <span class="order-status status-delivered">✓ Delivered</span>
+                </div>
+                <div class="order-items">2x Cone Crusher, 1x Nitro DR</div>
+                <div class="flex-between">
+                  <span class="order-total">$18.97</span>
+                  <button class="btn btn-outline" style="padding: 0.5rem 1rem; font-size: 0.75rem;">View Details →</button>
+                </div>
+              </div>
+              
+              <div class="order-card">
+                <div class="order-header">
+                  <span class="order-id">#ORD-2026-002</span>
+                  <span class="order-status status-shipped">🚚 Shipped</span>
+                </div>
+                <div class="order-items">3x Pink Slip</div>
+                <div class="flex-between">
+                  <span class="order-total">$14.97</span>
+                  <button class="btn btn-outline" style="padding: 0.5rem 1rem; font-size: 0.75rem;">Track Package →</button>
+                </div>
+              </div>
+              
+              <div class="order-card">
+                <div class="order-header">
+                  <span class="order-id">#ORD-2026-003</span>
+                  <span class="order-status status-paid">💳 Paid</span>
+                </div>
+                <div class="order-items">1x Caramel Clutch</div>
+                <div class="flex-between">
+                  <span class="order-total">$5.99</span>
+                  <button class="btn btn-outline" style="padding: 0.5rem 1rem; font-size: 0.75rem;">View Details →</button>
+                </div>
+              </div>
+            </div>
+            
+            <div>
+              <h3 style="margin-bottom: 1rem;">🚚 Fulfillment Timeline</h3>
+              <div class="card">
+                <div class="card-title">Order #ORD-2026-002</div>
+                <div class="timeline">
+                  <div class="timeline-item completed">
+                    <div class="timeline-title">Order Placed</div>
+                    <div class="timeline-date">Jan 15, 2026 • 2:30 PM</div>
+                  </div>
+                  <div class="timeline-item completed">
+                    <div class="timeline-title">Payment Confirmed</div>
+                    <div class="timeline-date">Jan 15, 2026 • 2:31 PM</div>
+                  </div>
+                  <div class="timeline-item completed">
+                    <div class="timeline-title">Shipped</div>
+                    <div class="timeline-date">Jan 16, 2026 • 10:15 AM</div>
+                  </div>
+                  <div class="timeline-item current">
+                    <div class="timeline-title">Out for Delivery</div>
+                    <div class="timeline-date">Expected: Jan 18, 2026</div>
+                  </div>
+                  <div class="timeline-item">
+                    <div class="timeline-title">Delivered</div>
+                    <div class="timeline-date">Pending</div>
+                  </div>
+                </div>
+                <div style="margin-top: 1rem; padding: 0.75rem; background: var(--bg); border-radius: 8px; font-size: 0.875rem;">
+                  <strong>📍 Tracking:</strong> <span style="color: var(--accent);">1Z999AA10123456784</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- SCREEN 2: Checkout with Coupons -->
+    <div class="wireframe-section">
+      <h2 class="wireframe-title">
+        <span>2️⃣ Checkout with Discount Codes</span>
+        <span class="badge">Phase 10</span>
+      </h2>
+      <p class="wireframe-desc">Coupon code input field with validation and applied discount display.</p>
+      
+      <div class="screen">
+        <div class="screen-header">
+          <div class="screen-title">💳 Checkout</div>
+          <div class="screen-nav">
+            <div class="nav-item">← Back to Cart</div>
+          </div>
+        </div>
+        <div class="screen-body">
+          <div class="grid-2">
+            <div>
+              <h3 style="margin-bottom: 1rem;">Order Summary</h3>
+              <div class="card" style="margin-bottom: 1rem;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                  <span>2x Cone Crusher</span>
+                  <span>$11.98</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                  <span>1x Nitro DR</span>
+                  <span>$6.99</span>
+                </div>
+                <div style="border-top: 1px solid var(--border); margin-top: 1rem; padding-top: 1rem;">
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                    <span>Subtotal</span>
+                    <span>$18.97</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; color: var(--success);">
+                    <span>Discount (SAVE20)</span>
+                    <span>-$3.79</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 1.25rem; margin-top: 0.5rem;">
+                    <span>Total</span>
+                    <span>$15.18</span>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Coupon Section - NEW -->
+              <div class="card" style="border-color: var(--success);">
+                <div class="card-title" style="color: var(--success);">🎟️ Discount Code</div>
+                
+                <!-- Coupon Applied State -->
+                <div class="coupon-applied" style="margin-bottom: 1rem;">
+                  <div>
+                    <span class="coupon-code">SAVE20</span>
+                    <span style="margin-left: 0.5rem; font-size: 0.875rem;">20% off</span>
+                  </div>
+                  <button style="background: none; border: none; color: var(--danger); cursor: pointer;">✕ Remove</button>
+                </div>
+                
+                <!-- Or Coupon Input State -->
+                <div class="coupon-input">
+                  <input type="text" class="input" placeholder="Enter coupon code" style="flex: 1;">
+                  <button class="btn btn-success">Apply</button>
+                </div>
+                
+                <div style="margin-top: 0.75rem; font-size: 0.75rem; color: var(--text-muted);">
+                  💡 Try: SAVE20, WELCOME10, FREESHIP
+                </div>
+              </div>
+            </div>
+            
+            <div>
+              <h3 style="margin-bottom: 1rem;">💳 Select Payment Method</h3>
+              
+              <!-- Payment Handler Selection - NEW -->
+              <div style="display: flex; flex-direction: column; gap: 1rem;">
+                <div class="payment-option selected">
+                  <div class="payment-option-header">
+                    <div class="payment-icon">🏪</div>
+                    <div>
+                      <div class="payment-name">Wix Hosted Checkout</div>
+                      <div class="payment-desc">Secure redirect to Wix payment page</div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="payment-option">
+                  <div class="payment-option-header">
+                    <div class="payment-icon">🧪</div>
+                    <div>
+                      <div class="payment-name">Sandbox (Test)</div>
+                      <div class="payment-desc">For testing - use test cards</div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="payment-option" style="opacity: 0.5;">
+                  <div class="payment-option-header">
+                    <div class="payment-icon">G</div>
+                    <div>
+                      <div class="payment-name">Google Pay</div>
+                      <div class="payment-desc">Coming soon</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <button class="btn btn-primary" style="width: 100%; margin-top: 1.5rem; padding: 1rem;">
+                Complete Purchase →
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- SCREEN 3: Payment Instrument Minting -->
+    <div class="wireframe-section">
+      <h2 class="wireframe-title">
+        <span>3️⃣ Payment Instrument Minting</span>
+        <span class="badge">Phase 11</span>
+      </h2>
+      <p class="wireframe-desc">Sandbox payment testing with test cards and minted instrument display.</p>
+      
+      <div class="screen">
+        <div class="screen-header">
+          <div class="screen-title">🧪 Sandbox Payment</div>
+          <div class="screen-nav">
+            <div class="nav-item">← Back to Checkout</div>
+          </div>
+        </div>
+        <div class="screen-body">
+          <div class="grid-2">
+            <div>
+              <h3 style="margin-bottom: 1rem;">Test Card Input</h3>
+              <div class="card">
+                <div style="margin-bottom: 1rem;">
+                  <label style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 0.5rem;">Card Number</label>
+                  <input type="text" class="input" value="4242 4242 4242 4242" style="font-family: monospace;">
+                </div>
+                
+                <div class="grid-2" style="gap: 1rem;">
+                  <div>
+                    <label style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 0.5rem;">Expiry</label>
+                    <input type="text" class="input" value="12/30">
+                  </div>
+                  <div>
+                    <label style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 0.5rem;">CVC</label>
+                    <input type="text" class="input" value="123">
+                  </div>
+                </div>
+                
+                <button class="btn btn-primary" style="width: 100%; margin-top: 1.5rem;">
+                  🔐 Mint Instrument
+                </button>
+              </div>
+              
+              <div class="card" style="margin-top: 1rem;">
+                <div class="card-title">🧪 Test Cards</div>
+                <div style="font-size: 0.875rem;">
+                  <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid var(--border);">
+                    <code>4242 4242 4242 4242</code>
+                    <span style="color: var(--success);">✓ Success</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid var(--border);">
+                    <code>4000 0000 0000 0002</code>
+                    <span style="color: var(--danger);">✗ Decline</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid var(--border);">
+                    <code>4000 0000 0000 9995</code>
+                    <span style="color: var(--warning);">⚠ No Funds</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; padding: 0.5rem 0;">
+                    <code>4000 0000 0000 0069</code>
+                    <span style="color: var(--danger);">✗ Expired</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div>
+              <h3 style="margin-bottom: 1rem;">Minted Instrument</h3>
+              
+              <!-- Minted Card Display -->
+              <div class="instrument-card">
+                <div class="instrument-brand">VISA • Sandbox</div>
+                <div class="instrument-number">•••• •••• •••• 4242</div>
+                <div class="instrument-footer">
+                  <div>
+                    <div class="instrument-label">Expires</div>
+                    <div class="instrument-value">12/30</div>
+                  </div>
+                  <div>
+                    <div class="instrument-label">Amount</div>
+                    <div class="instrument-value">$15.18</div>
+                  </div>
+                  <div>
+                    <div class="instrument-label">Status</div>
+                    <div class="instrument-value" style="color: var(--success);">Active</div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="card" style="margin-top: 1rem;">
+                <div class="card-title">📋 Instrument Details</div>
+                <div style="font-size: 0.875rem; font-family: monospace; background: var(--bg); padding: 1rem; border-radius: 8px;">
+                  <div style="margin-bottom: 0.5rem;"><span style="color: var(--text-muted);">ID:</span> inst_sandbox_abc123</div>
+                  <div style="margin-bottom: 0.5rem;"><span style="color: var(--text-muted);">Token:</span> tok_sandbox_xyz789</div>
+                  <div style="margin-bottom: 0.5rem;"><span style="color: var(--text-muted);">Handler:</span> com.ucp.sandbox</div>
+                  <div><span style="color: var(--text-muted);">Expires:</span> 30 min</div>
+                </div>
+                
+                <div class="flex" style="margin-top: 1rem;">
+                  <button class="btn btn-success" style="flex: 1;">✓ Complete Payment</button>
+                  <button class="btn btn-outline" style="color: var(--danger);">Cancel</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- SCREEN 4: Webhook Management -->
+    <div class="wireframe-section">
+      <h2 class="wireframe-title">
+        <span>4️⃣ Webhook Management</span>
+        <span class="badge">Phase 9</span>
+      </h2>
+      <p class="wireframe-desc">Register webhooks to receive fulfillment events and track order status changes.</p>
+      
+      <div class="screen">
+        <div class="screen-header">
+          <div class="screen-title">🔔 Webhooks</div>
+          <div class="screen-nav">
+            <div class="nav-item">Products</div>
+            <div class="nav-item">Cart</div>
+            <div class="nav-item">Orders</div>
+            <div class="nav-item active new">Webhooks</div>
+          </div>
+        </div>
+        <div class="screen-body">
+          <div class="grid-2">
+            <div>
+              <h3 style="margin-bottom: 1rem;">Register New Webhook</h3>
+              <div class="card">
+                <div style="margin-bottom: 1rem;">
+                  <label style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 0.5rem;">Webhook URL</label>
+                  <input type="text" class="input" placeholder="https://your-server.com/webhook">
+                </div>
+                
+                <div style="margin-bottom: 1rem;">
+                  <label style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 0.5rem;">Events to Subscribe</label>
+                  <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                    <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: rgba(99, 102, 241, 0.2); border: 1px solid var(--accent); border-radius: 8px; cursor: pointer;">
+                      <input type="checkbox" checked> fulfillment.shipped
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; cursor: pointer;">
+                      <input type="checkbox"> fulfillment.delivered
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; cursor: pointer;">
+                      <input type="checkbox"> order.cancelled
+                    </label>
+                  </div>
+                </div>
+                
+                <button class="btn btn-primary" style="width: 100%;">
+                  + Register Webhook
+                </button>
+              </div>
+              
+              <div class="card" style="margin-top: 1rem;">
+                <div class="card-title">🧪 Test Webhook</div>
+                <p style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 1rem;">
+                  Simulate a fulfillment event to test your webhook endpoint.
+                </p>
+                <div style="display: flex; gap: 0.5rem;">
+                  <select class="input" style="flex: 1;">
+                    <option>fulfillment.shipped</option>
+                    <option>fulfillment.delivered</option>
+                    <option>order.cancelled</option>
+                  </select>
+                  <button class="btn btn-outline">Send Test</button>
+                </div>
+              </div>
+            </div>
+            
+            <div>
+              <h3 style="margin-bottom: 1rem;">Registered Webhooks</h3>
+              <div class="webhook-panel">
+                <div class="webhook-header">
+                  <span>3 Active Webhooks</span>
+                  <button class="btn btn-outline" style="padding: 0.5rem 1rem; font-size: 0.75rem;">Refresh</button>
+                </div>
+                <div class="webhook-list">
+                  <div class="webhook-item">
+                    <div>
+                      <div class="webhook-event">fulfillment.shipped</div>
+                      <div class="webhook-url">https://myapp.com/webhooks/ship</div>
+                    </div>
+                    <button style="background: none; border: none; color: var(--danger); cursor: pointer;">🗑️</button>
+                  </div>
+                  <div class="webhook-item">
+                    <div>
+                      <div class="webhook-event">fulfillment.delivered</div>
+                      <div class="webhook-url">https://myapp.com/webhooks/deliver</div>
+                    </div>
+                    <button style="background: none; border: none; color: var(--danger); cursor: pointer;">🗑️</button>
+                  </div>
+                  <div class="webhook-item">
+                    <div>
+                      <div class="webhook-event">order.cancelled</div>
+                      <div class="webhook-url">https://myapp.com/webhooks/cancel</div>
+                    </div>
+                    <button style="background: none; border: none; color: var(--danger); cursor: pointer;">🗑️</button>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="card" style="margin-top: 1rem;">
+                <div class="card-title">📜 Recent Events</div>
+                <div style="font-size: 0.875rem;">
+                  <div style="padding: 0.5rem 0; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between;">
+                    <span style="color: var(--accent);">fulfillment.shipped</span>
+                    <span style="color: var(--text-muted);">2 min ago</span>
+                  </div>
+                  <div style="padding: 0.5rem 0; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between;">
+                    <span style="color: var(--success);">fulfillment.delivered</span>
+                    <span style="color: var(--text-muted);">1 hour ago</span>
+                  </div>
+                  <div style="padding: 0.5rem 0; display: flex; justify-content: space-between;">
+                    <span style="color: var(--accent);">fulfillment.shipped</span>
+                    <span style="color: var(--text-muted);">3 hours ago</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Feature Summary -->
+    <div class="wireframe-section">
+      <h2 class="wireframe-title">📋 Feature Summary</h2>
+      
+      <div class="grid-3">
+        <div class="card">
+          <div class="card-title">Phase 7: Orders</div>
+          <ul style="font-size: 0.875rem; color: var(--text-muted); list-style: none;">
+            <li>✅ Order list view</li>
+            <li>✅ Order details</li>
+            <li>✅ Fulfillment timeline</li>
+            <li>✅ Tracking info</li>
+          </ul>
+        </div>
+        
+        <div class="card">
+          <div class="card-title">Phase 9: Webhooks</div>
+          <ul style="font-size: 0.875rem; color: var(--text-muted); list-style: none;">
+            <li>✅ Register webhooks</li>
+            <li>✅ Event subscriptions</li>
+            <li>✅ Test endpoint</li>
+            <li>✅ Event history</li>
+          </ul>
+        </div>
+        
+        <div class="card">
+          <div class="card-title">Phase 10: Discounts</div>
+          <ul style="font-size: 0.875rem; color: var(--text-muted); list-style: none;">
+            <li>✅ Coupon input</li>
+            <li>✅ Apply/remove</li>
+            <li>✅ Discount display</li>
+            <li>✅ Validation errors</li>
+          </ul>
+        </div>
+        
+        <div class="card">
+          <div class="card-title">Phase 11: Payments</div>
+          <ul style="font-size: 0.875rem; color: var(--text-muted); list-style: none;">
+            <li>✅ Handler selection</li>
+            <li>✅ Test card input</li>
+            <li>✅ Instrument minting</li>
+            <li>✅ Status display</li>
+          </ul>
+        </div>
+        
+        <div class="card">
+          <div class="card-title">Phase 8: Validation</div>
+          <ul style="font-size: 0.875rem; color: var(--text-muted); list-style: none;">
+            <li>✅ Schema validation</li>
+            <li>✅ Error messages</li>
+            <li>✅ Field highlighting</li>
+            <li>✅ Helpful hints</li>
+          </ul>
+        </div>
+        
+        <div class="card">
+          <div class="card-title">Navigation</div>
+          <ul style="font-size: 0.875rem; color: var(--text-muted); list-style: none;">
+            <li>✅ Products tab</li>
+            <li>✅ Cart tab</li>
+            <li>✅ Orders tab (NEW)</li>
+            <li>✅ Webhooks tab (NEW)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    
+  </div>
+</body>
+</html>
