@@ -346,6 +346,182 @@ router.get('/test/llm', (_req: Request, res: Response) => {
       cursor: pointer;
     }
 
+    /* Checkout Modal */
+    .checkout-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(8px);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .checkout-modal.open {
+      display: flex;
+    }
+
+    .checkout-modal-content {
+      width: 95%;
+      max-width: 500px;
+      height: 85vh;
+      max-height: 700px;
+      background: #1a1a2e;
+      border-radius: 16px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .checkout-modal-header {
+      padding: 16px 20px;
+      background: rgba(255, 255, 255, 0.05);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .checkout-modal-header h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .checkout-modal-close {
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      color: white;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 1.2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .checkout-modal-close:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .checkout-iframe-container {
+      flex: 1;
+      position: relative;
+      background: white;
+    }
+
+    .checkout-iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    .checkout-iframe-loading {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .checkout-iframe-loading .spinner-large {
+      width: 48px;
+      height: 48px;
+      border: 3px solid rgba(102, 126, 234, 0.3);
+      border-top-color: #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    .checkout-iframe-error {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 16px;
+      padding: 24px;
+      text-align: center;
+    }
+
+    .checkout-iframe-error.show {
+      display: flex;
+    }
+
+    .checkout-iframe-error h4 {
+      color: #fbbf24;
+      font-size: 1.1rem;
+    }
+
+    .checkout-iframe-error p {
+      opacity: 0.8;
+      max-width: 300px;
+      line-height: 1.5;
+    }
+
+    .checkout-iframe-error button {
+      margin-top: 8px;
+      padding: 12px 24px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .checkout-modal-footer {
+      padding: 12px 20px;
+      background: rgba(255, 255, 255, 0.05);
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+    }
+
+    .checkout-modal-footer a {
+      color: #93c5fd;
+      text-decoration: none;
+    }
+
+    .checkout-modal-footer a:hover {
+      text-decoration: underline;
+    }
+
+    /* Embed mode toggle */
+    .btn-embed {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+      color: white;
+    }
+
+    .btn-embed:hover {
+      opacity: 0.9;
+    }
+
     /* Input Area */
     .input-area {
       padding: 16px 24px;
@@ -501,6 +677,37 @@ router.get('/test/llm', (_req: Request, res: Response) => {
   </style>
 </head>
 <body>
+  <!-- Checkout Modal -->
+  <div class="checkout-modal" id="checkoutModal">
+    <div class="checkout-modal-content">
+      <div class="checkout-modal-header">
+        <h3>💳 Complete Your Payment</h3>
+        <button class="checkout-modal-close" onclick="closeCheckoutModal()">×</button>
+      </div>
+      <div class="checkout-iframe-container">
+        <div class="checkout-iframe-loading" id="iframeLoading">
+          <div class="spinner-large"></div>
+          <p>Loading checkout...</p>
+        </div>
+        <div class="checkout-iframe-error" id="iframeError">
+          <h4>⚠️ Embedding Not Supported</h4>
+          <p>The Wix checkout page cannot be embedded due to security restrictions. Please use the button below to open it in a new tab.</p>
+          <button onclick="openCheckoutExternal()">Open Checkout in New Tab →</button>
+        </div>
+        <iframe 
+          id="checkoutIframe" 
+          class="checkout-iframe" 
+          sandbox="allow-scripts allow-forms allow-same-origin allow-popups allow-top-navigation"
+          allow="payment"
+        ></iframe>
+      </div>
+      <div class="checkout-modal-footer">
+        <span>Secure payment by Wix</span>
+        <a href="#" onclick="openCheckoutExternal(); return false;">Open in new tab</a>
+      </div>
+    </div>
+  </div>
+
   <div class="container">
     <header class="header">
       <h1><span>🤖</span> PopStop AI Shopping Assistant</h1>
@@ -838,8 +1045,11 @@ router.get('/test/llm', (_req: Request, res: Response) => {
           <h4>💳 Complete Payment</h4>
           <div class="checkout-url" id="checkoutUrl"></div>
           <div class="checkout-actions">
-            <button class="btn-copy" onclick="copyCheckoutUrl()">📋 Copy Link</button>
-            <button class="btn-open" onclick="openCheckout()">Open Checkout →</button>
+            <button class="btn-embed" onclick="openEmbeddedCheckout()">🖼️ Pay Here</button>
+            <button class="btn-open" onclick="openCheckout()">Open in Tab →</button>
+          </div>
+          <div style="margin-top: 8px;">
+            <button class="btn-copy" onclick="copyCheckoutUrl()" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); padding: 8px;">📋 Copy Link</button>
           </div>
         </div>
         
@@ -884,6 +1094,115 @@ router.get('/test/llm', (_req: Request, res: Response) => {
       }
     }
 
+    // Embedded checkout modal functions
+    let iframeLoadTimeout = null;
+    let iframeLoaded = false;
+
+    function openEmbeddedCheckout() {
+      if (!currentCheckoutUrl) return;
+      
+      const modal = document.getElementById('checkoutModal');
+      const iframe = document.getElementById('checkoutIframe');
+      const loading = document.getElementById('iframeLoading');
+      const error = document.getElementById('iframeError');
+      
+      // Reset state
+      iframeLoaded = false;
+      loading.style.display = 'flex';
+      error.classList.remove('show');
+      iframe.style.opacity = '0';
+      
+      // Open modal
+      modal.classList.add('open');
+      document.body.style.overflow = 'hidden';
+      
+      // Set up iframe load detection
+      iframe.onload = function() {
+        iframeLoaded = true;
+        clearTimeout(iframeLoadTimeout);
+        
+        // Small delay to ensure content is rendered
+        setTimeout(() => {
+          loading.style.display = 'none';
+          iframe.style.opacity = '1';
+          
+          // Try to detect if we got blocked (X-Frame-Options)
+          // This is tricky - we can't directly access cross-origin iframe content
+          // But we can check if the iframe appears empty
+          try {
+            // If we can access contentWindow but not contentDocument, 
+            // it might be blocked or cross-origin (which is expected)
+            // We'll assume success if load event fired
+            logApi('EMBED', 'Checkout iframe loaded', 'OK');
+          } catch (e) {
+            // Expected for cross-origin
+          }
+        }, 500);
+      };
+      
+      iframe.onerror = function() {
+        clearTimeout(iframeLoadTimeout);
+        showIframeError();
+      };
+      
+      // Set timeout for loading (if takes too long, might be blocked)
+      iframeLoadTimeout = setTimeout(() => {
+        if (!iframeLoaded) {
+          // Check if iframe has any content
+          showIframeError();
+        }
+      }, 10000); // 10 second timeout
+      
+      // Load the checkout URL
+      iframe.src = currentCheckoutUrl;
+      logApi('EMBED', 'Loading checkout in iframe', '...');
+    }
+
+    function showIframeError() {
+      const loading = document.getElementById('iframeLoading');
+      const error = document.getElementById('iframeError');
+      const iframe = document.getElementById('checkoutIframe');
+      
+      loading.style.display = 'none';
+      error.classList.add('show');
+      iframe.style.opacity = '0';
+      logApi('EMBED', 'Checkout iframe', 'BLOCKED', true);
+    }
+
+    function closeCheckoutModal() {
+      const modal = document.getElementById('checkoutModal');
+      const iframe = document.getElementById('checkoutIframe');
+      
+      modal.classList.remove('open');
+      document.body.style.overflow = '';
+      iframe.src = '';
+      
+      clearTimeout(iframeLoadTimeout);
+    }
+
+    function openCheckoutExternal() {
+      closeCheckoutModal();
+      if (currentCheckoutUrl) {
+        window.open(currentCheckoutUrl, '_blank');
+      }
+    }
+
+    // Close modal on backdrop click
+    document.addEventListener('DOMContentLoaded', () => {
+      const modal = document.getElementById('checkoutModal');
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          closeCheckoutModal();
+        }
+      });
+      
+      // Close on Escape key
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal.classList.contains('open')) {
+          closeCheckoutModal();
+        }
+      });
+    });
 
     // Show order confirmation
     function showOrderConfirmation(status) {
