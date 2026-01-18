@@ -367,10 +367,10 @@ router.get('/test/llm', (_req: Request, res: Response) => {
     }
 
     .checkout-modal-content {
-      width: 95%;
-      max-width: 500px;
-      height: 85vh;
-      max-height: 700px;
+      width: 100%;
+      max-width: 420px;  /* Narrower to trigger mobile checkout layout */
+      height: 92vh;
+      max-height: 800px;
       background: #1a1a2e;
       border-radius: 16px;
       overflow: hidden;
@@ -378,6 +378,20 @@ router.get('/test/llm', (_req: Request, res: Response) => {
       flex-direction: column;
       box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
       border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    /* Full screen on mobile devices */
+    @media (max-width: 480px) {
+      .checkout-modal-content {
+        max-width: 100%;
+        height: 100vh;
+        max-height: none;
+        border-radius: 0;
+      }
+      
+      .checkout-modal {
+        align-items: flex-end;
+      }
     }
 
     .checkout-modal-header {
@@ -420,12 +434,15 @@ router.get('/test/llm', (_req: Request, res: Response) => {
       flex: 1;
       position: relative;
       background: white;
+      overflow: hidden;
+      min-height: 0;  /* Important for flexbox */
     }
 
     .checkout-iframe {
       width: 100%;
       height: 100%;
       border: none;
+      display: block;
     }
 
     .checkout-iframe-loading {
@@ -697,8 +714,9 @@ router.get('/test/llm', (_req: Request, res: Response) => {
         <iframe 
           id="checkoutIframe" 
           class="checkout-iframe" 
-          sandbox="allow-scripts allow-forms allow-same-origin allow-popups allow-top-navigation"
+          sandbox="allow-scripts allow-forms allow-same-origin allow-popups allow-top-navigation allow-popups-to-escape-sandbox"
           allow="payment"
+          style="width: 100%; height: 100%; border: none;"
         ></iframe>
       </div>
       <div class="checkout-modal-footer">
