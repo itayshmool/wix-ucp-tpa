@@ -13,6 +13,8 @@ import cartRoutes from './routes/cart.routes.js';
 import checkoutRoutes from './routes/checkout.routes.js';
 import storefrontRoutes from './routes/storefront.routes.js';
 import ucpRoutes from './routes/ucp.routes.js';
+import mcpRoutes from './routes/mcp.routes.js';
+import a2aRoutes from './routes/a2a.routes.js';
 import testUiRoutes from './routes/test-ui.routes.js';
 import testLlmRoutes from './routes/test-llm.routes.js';
 import testFullRoutes from './routes/test-full.routes.js';
@@ -62,6 +64,13 @@ app.get('/', (_req, res) => {
       ucpCart: '/ucp/cart',
       ucpCheckout: '/ucp/checkout',
       ucpOrders: '/ucp/orders/:id',
+      // MCP (Phase 13)
+      mcpTools: '/mcp/tools',
+      mcpCall: '/mcp/call',
+      mcpOpenapi: '/mcp/openapi',
+      // A2A (Phase 13)
+      a2aAgent: '/a2a/agent',
+      a2aHandoff: '/a2a/handoff',
       // Test UI
       testStorefront: '/test/storefront',
       testLlmChat: '/test/llm',
@@ -86,6 +95,12 @@ app.use('/storefront', storefrontRoutes);
 
 // UCP Routes (POC) - mounted at root for standard UCP paths
 app.use('/', ucpRoutes);
+
+// MCP Routes (Phase 13) - Model Context Protocol tools for AI
+app.use('/', mcpRoutes);
+
+// A2A Routes (Phase 13) - Agent-to-Agent coordination
+app.use('/', a2aRoutes);
 
 // Test UI Routes (POC)
 app.use('/test', testUiRoutes);

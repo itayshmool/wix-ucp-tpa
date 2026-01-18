@@ -104,6 +104,20 @@ router.get('/.well-known/ucp', (_req: Request, res: Response) => {
       checkout: `${baseUrl}/ucp/checkout`,
       orders: `${baseUrl}/ucp/orders/{id}`,
     },
+    // Protocol Bindings (Phase 13)
+    bindings: {
+      mcp: {
+        tools: `${baseUrl}/mcp/tools`,
+        call: `${baseUrl}/mcp/call`,
+        openapi: `${baseUrl}/mcp/openapi`,
+      },
+      a2a: {
+        agent: `${baseUrl}/a2a/agent`,
+        agents: `${baseUrl}/a2a/agents`,
+        handoff: `${baseUrl}/a2a/handoff`,
+        resolve: `${baseUrl}/a2a/resolve`,
+      },
+    },
     payment_handlers: [
       'com.wix.checkout.v1',  // Wix Hosted Checkout
     ],

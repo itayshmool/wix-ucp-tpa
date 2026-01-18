@@ -15,11 +15,27 @@ export interface UCPDiscovery {
   merchant: UCPMerchant;
   capabilities: UCPCapability[];
   endpoints: UCPEndpoints;
+  // Protocol Bindings (Phase 13)
+  bindings?: UCPBindings;
   payment_handlers: string[];
   trust_signals?: UCPTrustSignals;
   // Geographic scope
   supported_countries?: string[];
   shipping?: UCPShipping;
+}
+
+export interface UCPBindings {
+  mcp?: {
+    tools: string;
+    call: string;
+    openapi?: string;
+  };
+  a2a?: {
+    agent: string;
+    agents: string;
+    handoff: string;
+    resolve?: string;
+  };
 }
 
 export interface UCPShipping {
