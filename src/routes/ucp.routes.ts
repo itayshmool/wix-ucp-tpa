@@ -96,7 +96,7 @@ router.get('/.well-known/ucp', (_req: Request, res: Response) => {
       currency: 'USD',
       verified: true,
     },
-    capabilities: ['catalog_search', 'product_details', 'cart_management', 'checkout', 'orders', 'fulfillment', 'discounts', 'payment_handlers', 'server_checkout'],
+    capabilities: ['catalog_search', 'product_details', 'cart_management', 'checkout', 'orders', 'fulfillment', 'discounts', 'payment_handlers', 'server_checkout', 'identity_linking'],
     endpoints: {
       catalog: `${baseUrl}/ucp/products`,
       product: `${baseUrl}/ucp/products/{id}`,
@@ -116,6 +116,13 @@ router.get('/.well-known/ucp', (_req: Request, res: Response) => {
         agents: `${baseUrl}/a2a/agents`,
         handoff: `${baseUrl}/a2a/handoff`,
         resolve: `${baseUrl}/a2a/resolve`,
+      },
+      identity: {
+        link: `${baseUrl}/ucp/identity/link`,
+        lookup: `${baseUrl}/ucp/identity/{primaryId}`,
+        consent: `${baseUrl}/ucp/consent`,
+        gdprExport: `${baseUrl}/ucp/gdpr/export/{subjectId}`,
+        gdprDelete: `${baseUrl}/ucp/gdpr/delete`,
       },
     },
     payment_handlers: [

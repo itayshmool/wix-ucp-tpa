@@ -15,6 +15,7 @@ import storefrontRoutes from './routes/storefront.routes.js';
 import ucpRoutes from './routes/ucp.routes.js';
 import mcpRoutes from './routes/mcp.routes.js';
 import a2aRoutes from './routes/a2a.routes.js';
+import identityRoutes from './routes/identity.routes.js';
 import testUiRoutes from './routes/test-ui.routes.js';
 import testLlmRoutes from './routes/test-llm.routes.js';
 import testFullRoutes from './routes/test-full.routes.js';
@@ -71,6 +72,11 @@ app.get('/', (_req, res) => {
       // A2A (Phase 13)
       a2aAgent: '/a2a/agent',
       a2aHandoff: '/a2a/handoff',
+      // Identity & Consent (Phase 14)
+      identityLink: '/ucp/identity/link',
+      consent: '/ucp/consent',
+      gdprExport: '/ucp/gdpr/export/:subjectId',
+      gdprDelete: '/ucp/gdpr/delete',
       // Test UI
       testStorefront: '/test/storefront',
       testLlmChat: '/test/llm',
@@ -101,6 +107,9 @@ app.use('/', mcpRoutes);
 
 // A2A Routes (Phase 13) - Agent-to-Agent coordination
 app.use('/', a2aRoutes);
+
+// Identity & Consent Routes (Phase 14) - GDPR compliance
+app.use('/', identityRoutes);
 
 // Test UI Routes (POC)
 app.use('/test', testUiRoutes);

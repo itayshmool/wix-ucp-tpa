@@ -36,6 +36,13 @@ export interface UCPBindings {
     handoff: string;
     resolve?: string;
   };
+  identity?: {
+    link: string;
+    lookup: string;
+    consent: string;
+    gdprExport: string;
+    gdprDelete: string;
+  };
 }
 
 export interface UCPShipping {
@@ -64,6 +71,7 @@ export type UCPCapability =
   | 'discounts'
   | 'payment_handlers'
   | 'server_checkout'
+  | 'identity_linking'
   // Legacy aliases for backward compatibility
   | 'browse' 
   | 'search' 
