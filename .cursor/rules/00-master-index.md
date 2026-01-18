@@ -54,18 +54,18 @@ A Wix TPA that:
 | 5 | UCP Capabilities | Products, Orders | ✅ |
 | 6 | Production | Security, monitoring | ✅ |
 
-### Phases 7-14: UCP Spec Completion (New)
+### Phases 7-14: UCP Spec Completion
 
-| Phase | Name | Description | Priority | Complexity |
-|-------|------|-------------|----------|------------|
-| 7 | UCP Order Capability | Expose OrdersService via UCP | 🔴 High | 🟢 Low |
-| 8 | Schema Validation | JSON schema + UCP errors | 🟡 Medium | 🟢 Low |
-| 9 | Fulfillment Extension | Webhook callbacks to agents | 🟡 Medium | 🟡 Medium |
-| 10 | Discounts Extension | Coupon code support | 🟡 Medium | 🟡 Medium |
-| 11 | Payment Handlers | Mint payment instruments | 🔴 High | 🔴 High |
-| 12 | Complete Checkout | Server-side order creation | 🔴 High | 🔴 High |
-| 13 | Protocol Bindings | MCP + A2A integration | 🟡 Medium | 🔴 High |
-| 14 | Identity & Consent | Identity linking + GDPR | 🟢 Low | 🟡 Medium |
+| Phase | Name | Description | Priority | Status |
+|-------|------|-------------|----------|--------|
+| 7 | UCP Order Capability | Expose OrdersService via UCP | 🔴 High | ✅ Complete |
+| 8 | Schema Validation | JSON schema + UCP errors | 🟡 Medium | ✅ Complete |
+| 9 | Fulfillment Extension | Webhook callbacks to agents | 🟡 Medium | ✅ Complete |
+| 10 | Discounts Extension | Coupon code support | 🟡 Medium | ✅ Complete |
+| 11 | Payment Handlers | Mint payment instruments | 🔴 High | ✅ Complete |
+| 12 | Complete Checkout | Server-side order creation | 🔴 High | ⬜ Pending |
+| 13 | Protocol Bindings | MCP + A2A integration | 🟡 Medium | ⬜ Pending |
+| 14 | Identity & Consent | Identity linking + GDPR | 🟢 Low | ⬜ Pending |
 
 See [phase-7-14/README.md](./phase-7-14/README.md) for detailed implementation guides.
 
@@ -160,7 +160,7 @@ identity_linking      # Phase 14: Cross-platform identity
 ✅ Step 3: Capability Negotiation
 ✅ Step 4: Create Checkout
 ✅ Step 5: Update Checkout
-⬜ Step 6: Mint Instrument (Phase 11)
+✅ Step 6: Mint Instrument (Phase 11)
 ⬜ Step 7: Complete Checkout (Phase 12)
 ✅ Step 8: Webhook Simulation (Phase 9)
 ```
