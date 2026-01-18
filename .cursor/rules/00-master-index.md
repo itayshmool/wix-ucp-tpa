@@ -65,7 +65,7 @@ A Wix TPA that:
 | 11 | Payment Handlers | Mint payment instruments | 🔴 High | ✅ Complete |
 | 12 | Complete Checkout | Server-side order creation | 🔴 High | ✅ Complete |
 | 13 | Protocol Bindings | MCP + A2A integration | 🟡 Medium | ✅ Complete |
-| 14 | Identity & Consent | Identity linking + GDPR | 🟢 Low | ⬜ Pending |
+| 14 | Identity & Consent | Identity linking + GDPR | 🟢 Low | ✅ Complete |
 
 See [phase-7-14/README.md](./phase-7-14/README.md) for detailed implementation guides.
 
