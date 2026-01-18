@@ -46,6 +46,7 @@ export type UCPCapability =
   | 'orders'
   | 'fulfillment'
   | 'discounts'
+  | 'payment_handlers'
   // Legacy aliases for backward compatibility
   | 'browse' 
   | 'search' 

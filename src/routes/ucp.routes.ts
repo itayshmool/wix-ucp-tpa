@@ -44,6 +44,15 @@ import {
   removeCouponFromCheckout,
   getCheckoutDiscounts,
 } from '../services/discount/discount.service.js';
+import {
+  getPaymentHandlers,
+  getPaymentHandler,
+  mintInstrument,
+  getInstrument,
+  validateInstrument,
+  cancelInstrument,
+} from '../services/payment/payment.service.js';
+import { MintInstrumentRequestSchema } from '../services/payment/payment.types.js';
 import { logger } from '../utils/logger.js';
 import { config } from '../config/env.js';
 
@@ -82,7 +91,7 @@ router.get('/.well-known/ucp', (_req: Request, res: Response) => {
       currency: 'USD',
       verified: true,
     },
-    capabilities: ['catalog_search', 'product_details', 'cart_management', 'checkout', 'orders', 'fulfillment', 'discounts'],
+    capabilities: ['catalog_search', 'product_details', 'cart_management', 'checkout', 'orders', 'fulfillment', 'discounts', 'payment_handlers'],
     endpoints: {
       catalog: `${baseUrl}/ucp/products`,
       product: `${baseUrl}/ucp/products/{id}`,
@@ -1132,6 +1141,204 @@ router.get('/ucp/checkout/:checkoutId/discounts', async (req: Request, res: Resp
       return sendError(res, 404, 'Checkout not found', 'CHECKOUT_NOT_FOUND');
     }
     sendError(res, 500, error.message || 'Failed to get discounts', 'DISCOUNT_ERROR');
+  }
+});
+
+// ============================================================================
+// UCP Payment Handlers Extension
+// ============================================================================
+
+/**
+ * List available payment handlers
+ * GET /ucp/payment-handlers
+ * 
+ * Query params:
+ * - enabledOnly: boolean (default true)
+ */
+router.get('/ucp/payment-handlers', (req: Request, res: Response) => {
+  const enabledOnly = req.query.enabledOnly !== 'false';
+  
+  logger.info('UCP: Listing payment handlers', { enabledOnly });
+  
+  const result = getPaymentHandlers(enabledOnly);
+  res.json(result);
+});
+
+/**
+ * Get a specific payment handler
+ * GET /ucp/payment-handlers/:handlerId
+ */
+router.get('/ucp/payment-handlers/:handlerId', (req: Request, res: Response) => {
+  const { handlerId } = req.params;
+  
+  logger.info('UCP: Getting payment handler', { handlerId });
+  
+  const handler = getPaymentHandler(handlerId as any);
+  
+  if (!handler) {
+    return sendError(res, 404, `Payment handler '${handlerId}' not found`, 'HANDLER_NOT_FOUND');
+  }
+  
+  res.json(handler);
+});
+
+/**
+ * Mint a payment instrument (tokenize payment credentials)
+ * POST /ucp/checkout/:checkoutId/mint
+ * 
+ * Body: {
+ *   handlerId: string,
+ *   amount: number,
+ *   currency: string,
+ *   billingAddress?: object,
+ *   paymentData?: object,
+ *   idempotencyKey?: string
+ * }
+ * 
+ * This endpoint tokenizes payment credentials and returns a short-lived
+ * instrument that can be used to complete the checkout.
+ */
+router.post('/ucp/checkout/:checkoutId/mint', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { checkoutId } = req.params;
+    
+    // Validate request body
+    const parseResult = MintInstrumentRequestSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      res.status(400).json({
+        error: 'Validation Error',
+        message: 'Invalid mint instrument request',
+        code: 'VALIDATION_ERROR',
+        details: parseResult.error.errors.map(e => ({
+          field: e.path.join('.'),
+          message: e.message,
+        })),
+      });
+      return;
+    }
+
+    logger.info('UCP: Minting payment instrument', {
+      checkoutId,
+      handlerId: parseResult.data.handlerId,
+      amount: parseResult.data.amount,
+      currency: parseResult.data.currency,
+    });
+
+    const result = await mintInstrument(checkoutId, parseResult.data);
+
+    if (!result.success) {
+      res.status(400).json(result);
+      return;
+    }
+
+    res.status(201).json(result);
+  } catch (error: any) {
+    logger.error('UCP: Failed to mint instrument', {
+      checkoutId: req.params.checkoutId,
+      error: error.message,
+    });
+    sendError(res, 500, error.message || 'Failed to mint instrument', 'MINT_ERROR');
+  }
+});
+
+/**
+ * Get a minted instrument
+ * GET /ucp/instruments/:instrumentId
+ */
+router.get('/ucp/instruments/:instrumentId', (req: Request, res: Response) => {
+  const { instrumentId } = req.params;
+  
+  logger.info('UCP: Getting instrument', { instrumentId });
+  
+  const instrument = getInstrument(instrumentId);
+  
+  if (!instrument) {
+    return sendError(res, 404, 'Instrument not found', 'INSTRUMENT_NOT_FOUND');
+  }
+  
+  res.json(instrument);
+});
+
+/**
+ * Validate an instrument for checkout
+ * POST /ucp/instruments/:instrumentId/validate
+ * 
+ * Body: { checkoutId, amount, currency }
+ */
+router.post('/ucp/instruments/:instrumentId/validate', (req: Request, res: Response) => {
+  const { instrumentId } = req.params;
+  const { checkoutId, amount, currency } = req.body;
+  
+  if (!checkoutId || !amount || !currency) {
+    return sendError(res, 400, 'checkoutId, amount, and currency are required', 'INVALID_REQUEST');
+  }
+  
+  logger.info('UCP: Validating instrument', { instrumentId, checkoutId });
+  
+  const result = validateInstrument(instrumentId, checkoutId, amount, currency);
+  
+  if (!result.valid) {
+    return res.status(400).json({
+      valid: false,
+      error: result.error,
+      errorCode: result.errorCode,
+    });
+  }
+  
+  res.json({ valid: true, instrumentId });
+});
+
+/**
+ * Cancel an instrument
+ * DELETE /ucp/instruments/:instrumentId
+ */
+router.delete('/ucp/instruments/:instrumentId', (req: Request, res: Response) => {
+  const { instrumentId } = req.params;
+  
+  logger.info('UCP: Cancelling instrument', { instrumentId });
+  
+  const cancelled = cancelInstrument(instrumentId);
+  
+  if (!cancelled) {
+    return sendError(res, 404, 'Instrument not found', 'INSTRUMENT_NOT_FOUND');
+  }
+  
+  res.json({ success: true, message: 'Instrument cancelled' });
+});
+
+/**
+ * Test endpoint: Mint a sandbox instrument directly
+ * POST /ucp/test/mint
+ * 
+ * Simplified endpoint for testing without a real checkout.
+ * Uses sandbox handler by default.
+ */
+router.post('/ucp/test/mint', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { 
+      amount = 10.00, 
+      currency = 'USD',
+      cardNumber = '4242424242424242',
+    } = req.body;
+
+    logger.info('UCP: Test mint instrument', { amount, currency });
+
+    const result = await mintInstrument('test-checkout', {
+      handlerId: 'com.ucp.sandbox',
+      amount,
+      currency,
+      paymentData: { cardNumber },
+    });
+
+    if (!result.success) {
+      res.status(400).json(result);
+      return;
+    }
+
+    res.status(201).json(result);
+  } catch (error: any) {
+    logger.error('UCP: Test mint failed', { error: error.message });
+    sendError(res, 500, error.message || 'Test mint failed', 'MINT_ERROR');
   }
 });
 
