@@ -9,7 +9,7 @@
  */
 
 import { createClient, OAuthStrategy } from '@wix/sdk';
-import { cart, currentCart, checkout } from '@wix/ecom';
+import { cart, currentCart, checkout, orders } from '@wix/ecom';
 import { products, collections } from '@wix/stores';
 import { config } from '../config/env.js';
 import { logger } from '../utils/logger.js';
@@ -33,6 +33,7 @@ export function createWixSdkClient() {
       cart,
       currentCart,
       checkout,
+      orders,
       // Stores modules
       products,
       collections,

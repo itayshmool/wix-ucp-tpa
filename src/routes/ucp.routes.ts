@@ -12,15 +12,38 @@ import { getWixSdkClient } from '../wix/sdk-client.js';
 import { 
   wixProductToUCP, 
   wixCartToUCP,
+  wixOrderToUCP,
 } from '../services/ucp/ucp.translator.js';
 import { 
   UCPDiscovery, 
   UCPProductsResponse,
+  UCPOrdersListResponse,
   UCPCheckout,
-  UCPCreateCartRequest,
-  UCPCreateCheckoutRequest,
   UCPError
 } from '../services/ucp/ucp.types.js';
+import {
+  UCPCreateCartRequestSchema,
+  UCPCreateCheckoutRequestSchema,
+  UCPUpdateCartItemSchema,
+} from '../services/ucp/ucp.schemas.js';
+import { validateBody } from '../middleware/validate.js';
+import {
+  registerWebhook,
+  unregisterWebhook,
+  getWebhookSubscriptions,
+  getWebhookSubscription,
+  createFulfillmentEvent,
+  dispatchFulfillmentEvent,
+  getFulfillmentEvents,
+  mapWixFulfillmentStatusToUCP,
+  getEventTypeForStatus,
+} from '../services/fulfillment/fulfillment.service.js';
+import { FulfillmentEventType } from '../services/fulfillment/fulfillment.types.js';
+import {
+  applyCouponToCheckout,
+  removeCouponFromCheckout,
+  getCheckoutDiscounts,
+} from '../services/discount/discount.service.js';
 import { logger } from '../utils/logger.js';
 import { config } from '../config/env.js';
 
@@ -59,7 +82,7 @@ router.get('/.well-known/ucp', (_req: Request, res: Response) => {
       currency: 'USD',
       verified: true,
     },
-    capabilities: ['catalog_search', 'product_details', 'cart_management', 'checkout'],
+    capabilities: ['catalog_search', 'product_details', 'cart_management', 'checkout', 'orders', 'fulfillment', 'discounts'],
     endpoints: {
       catalog: `${baseUrl}/ucp/products`,
       product: `${baseUrl}/ucp/products/{id}`,
@@ -301,20 +324,16 @@ router.get('/ucp/products/:id', async (req: Request, res: Response) => {
  * 
  * Uses currentCart.addToCurrentCart which handles visitor session automatically
  */
-router.post('/ucp/cart', async (req: Request, res: Response) => {
+router.post('/ucp/cart', validateBody(UCPCreateCartRequestSchema), async (req: Request, res: Response) => {
   try {
-    const { items } = req.body as UCPCreateCartRequest;
-
-    if (!items || !Array.isArray(items) || items.length === 0) {
-      return sendError(res, 400, 'Items array is required', 'INVALID_REQUEST');
-    }
+    const { items } = req.body;
 
     logger.info('UCP: Creating cart', { itemCount: items.length });
 
     const client = getWixSdkClient();
 
     // Convert UCP items to Wix SDK lineItems format
-    const lineItems = items.map(item => ({
+    const lineItems = items.map((item: { productId: string; quantity: number }) => ({
       catalogReference: {
         catalogItemId: item.productId,
         appId: WIX_STORES_APP_ID,
@@ -409,13 +428,9 @@ router.get('/ucp/cart/:id', async (req: Request, res: Response) => {
  * 
  * Body: { items: [{ productId, quantity, variantId? }] }
  */
-router.post('/ucp/cart/items', async (req: Request, res: Response) => {
+router.post('/ucp/cart/items', validateBody(UCPCreateCartRequestSchema), async (req: Request, res: Response) => {
   try {
     const { items } = req.body;
-
-    if (!items || !Array.isArray(items) || items.length === 0) {
-      return sendError(res, 400, 'Items array is required', 'INVALID_REQUEST');
-    }
 
     logger.info('UCP: Adding items to cart', { itemCount: items.length });
 
@@ -448,14 +463,10 @@ router.post('/ucp/cart/items', async (req: Request, res: Response) => {
  * 
  * Body: { quantity: number }
  */
-router.put('/ucp/cart/items/:itemId', async (req: Request, res: Response) => {
+router.put('/ucp/cart/items/:itemId', validateBody(UCPUpdateCartItemSchema), async (req: Request, res: Response) => {
   try {
     const { itemId } = req.params;
     const { quantity } = req.body;
-
-    if (quantity === undefined || quantity < 0) {
-      return sendError(res, 400, 'Valid quantity is required', 'INVALID_REQUEST');
-    }
 
     logger.info('UCP: Updating cart item quantity', { itemId, quantity });
 
@@ -571,9 +582,9 @@ router.delete('/ucp/cart', async (_req: Request, res: Response) => {
  * Cart is cleared AFTER successful checkout creation to prevent reuse.
  * Validates checkout URL to reject stale thank-you-page URLs.
  */
-router.post('/ucp/checkout', async (req: Request, res: Response) => {
+router.post('/ucp/checkout', validateBody(UCPCreateCheckoutRequestSchema), async (req: Request, res: Response) => {
   try {
-    const { cartId, successUrl: _successUrl } = req.body as UCPCreateCheckoutRequest;
+    const { cartId, successUrl: _successUrl } = req.body;
 
     logger.info('UCP: Creating checkout', { cartId });
 
@@ -765,13 +776,363 @@ router.get('/ucp/checkout/:checkoutId/status', async (req: Request, res: Respons
 });
 
 /**
- * Get Order
+ * List Orders
+ * GET /ucp/orders
+ * 
+ * Query params:
+ * - limit: number (default 20, max 50)
+ * - offset: number (default 0)
+ * - email: string (filter by customer email)
+ * 
+ * Note: Orders API typically requires elevated permissions.
+ * Returns orders for the current visitor/session if authenticated.
+ */
+router.get('/ucp/orders', async (req: Request, res: Response) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit as string) || 20, 50);
+    const offset = parseInt(req.query.offset as string) || 0;
+    const email = req.query.email as string;
+
+    logger.info('UCP: Listing orders', { limit, offset, email });
+
+    const client = getWixSdkClient();
+    
+    // Use the SDK's orders.searchOrders method
+    const query: any = {
+      search: email ? { filter: JSON.stringify({ 'buyerInfo.email': email }) } : undefined,
+      paging: { limit, offset },
+    };
+
+    const response = await client.orders.searchOrders(query);
+    const ordersData = (response as any).orders || [];
+    
+    const orders = ordersData.map(wixOrderToUCP);
+    const total = (response as any).metadata?.count || orders.length;
+
+    const result: UCPOrdersListResponse = {
+      orders,
+      pagination: {
+        total,
+        limit,
+        offset,
+        hasMore: orders.length === limit,
+      },
+    };
+
+    res.json(result);
+  } catch (error: any) {
+    logger.error('UCP: Failed to list orders', { 
+      error: error.message || error,
+      details: error.details,
+    });
+    // If orders API is not accessible (permission denied), return helpful message
+    if (error.message?.includes('permission') || error.message?.includes('auth')) {
+      return sendError(res, 403, 'Orders access requires elevated permissions', 'PERMISSION_DENIED');
+    }
+    sendError(res, 500, error.message || 'Failed to fetch orders', 'ORDERS_ERROR');
+  }
+});
+
+/**
+ * Get Order by ID
  * GET /ucp/orders/:id
  */
-router.get('/ucp/orders/:id', async (_req: Request, res: Response) => {
-  // Note: Orders API requires elevated permissions
-  // For POC, we'll return a placeholder
-  sendError(res, 501, 'Order retrieval not implemented in POC', 'NOT_IMPLEMENTED');
+router.get('/ucp/orders/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    logger.info('UCP: Getting order', { id });
+
+    const client = getWixSdkClient();
+    const response = await client.orders.getOrder(id);
+    
+    // SDK returns order directly or in .order property
+    const orderData = (response as any).order || response;
+    const order = wixOrderToUCP(orderData);
+    
+    res.json(order);
+  } catch (error: any) {
+    logger.error('UCP: Failed to get order', { 
+      id: req.params.id,
+      error: error.message,
+    });
+    
+    if (error.message?.includes('not found') || error.code === 'NOT_FOUND') {
+      return sendError(res, 404, 'Order not found', 'ORDER_NOT_FOUND');
+    }
+    if (error.message?.includes('permission') || error.message?.includes('auth')) {
+      return sendError(res, 403, 'Orders access requires elevated permissions', 'PERMISSION_DENIED');
+    }
+    sendError(res, 500, error.message || 'Failed to get order', 'ORDERS_ERROR');
+  }
+});
+
+/**
+ * Get Order Fulfillments (tracking info)
+ * GET /ucp/orders/:id/fulfillments
+ */
+router.get('/ucp/orders/:id/fulfillments', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    logger.info('UCP: Getting order fulfillments', { id });
+
+    const client = getWixSdkClient();
+    const response = await client.orders.getOrder(id);
+    const orderData = (response as any).order || response;
+    const order = wixOrderToUCP(orderData);
+    
+    res.json({
+      orderId: id,
+      fulfillmentStatus: order.fulfillmentStatus,
+      fulfillments: order.fulfillments || [],
+    });
+  } catch (error: any) {
+    logger.error('UCP: Failed to get order fulfillments', { 
+      id: req.params.id,
+      error: error.message,
+    });
+    
+    if (error.message?.includes('not found')) {
+      return sendError(res, 404, 'Order not found', 'ORDER_NOT_FOUND');
+    }
+    sendError(res, 500, error.message || 'Failed to get fulfillments', 'ORDERS_ERROR');
+  }
+});
+
+// ============================================================================
+// UCP Fulfillment Extension - Webhook Endpoints
+// ============================================================================
+
+/**
+ * Register a webhook subscription
+ * POST /ucp/webhooks
+ * 
+ * Body: { url, events, secret? }
+ */
+router.post('/ucp/webhooks', async (req: Request, res: Response) => {
+  try {
+    const { url, events, secret } = req.body;
+
+    if (!url || !events || !Array.isArray(events) || events.length === 0) {
+      return sendError(res, 400, 'url and events array are required', 'INVALID_REQUEST');
+    }
+
+    // Validate URL
+    try {
+      new URL(url);
+    } catch {
+      return sendError(res, 400, 'Invalid webhook URL', 'INVALID_URL');
+    }
+
+    // Validate events
+    const validEvents: FulfillmentEventType[] = [
+      'fulfillment.created',
+      'fulfillment.updated',
+      'fulfillment.shipped',
+      'fulfillment.delivered',
+      'fulfillment.cancelled',
+    ];
+    const invalidEvents = events.filter((e: string) => !validEvents.includes(e as FulfillmentEventType));
+    if (invalidEvents.length > 0) {
+      return sendError(res, 400, `Invalid events: ${invalidEvents.join(', ')}`, 'INVALID_EVENTS');
+    }
+
+    const subscription = registerWebhook(url, events as FulfillmentEventType[], secret);
+
+    logger.info('UCP: Webhook registered', { subscriptionId: subscription.id });
+
+    res.status(201).json(subscription);
+  } catch (error: any) {
+    logger.error('UCP: Failed to register webhook', { error: error.message });
+    sendError(res, 500, error.message || 'Failed to register webhook', 'WEBHOOK_ERROR');
+  }
+});
+
+/**
+ * List webhook subscriptions
+ * GET /ucp/webhooks
+ */
+router.get('/ucp/webhooks', (_req: Request, res: Response) => {
+  const subscriptions = getWebhookSubscriptions();
+  res.json({ subscriptions });
+});
+
+/**
+ * Get a specific webhook subscription
+ * GET /ucp/webhooks/:id
+ */
+router.get('/ucp/webhooks/:id', (req: Request, res: Response) => {
+  const subscription = getWebhookSubscription(req.params.id);
+  
+  if (!subscription) {
+    return sendError(res, 404, 'Webhook subscription not found', 'WEBHOOK_NOT_FOUND');
+  }
+  
+  res.json(subscription);
+});
+
+/**
+ * Delete a webhook subscription
+ * DELETE /ucp/webhooks/:id
+ */
+router.delete('/ucp/webhooks/:id', (req: Request, res: Response) => {
+  const deleted = unregisterWebhook(req.params.id);
+  
+  if (!deleted) {
+    return sendError(res, 404, 'Webhook subscription not found', 'WEBHOOK_NOT_FOUND');
+  }
+  
+  res.json({ success: true, message: 'Webhook subscription deleted' });
+});
+
+/**
+ * Get fulfillment events for an order
+ * GET /ucp/orders/:id/events
+ */
+router.get('/ucp/orders/:id/events', (req: Request, res: Response) => {
+  const events = getFulfillmentEvents(req.params.id);
+  res.json({ orderId: req.params.id, events });
+});
+
+/**
+ * Simulate a fulfillment event (for testing)
+ * POST /ucp/test/fulfillment
+ * 
+ * Body: { orderId, fulfillmentId, status, lineItems, tracking? }
+ */
+router.post('/ucp/test/fulfillment', async (req: Request, res: Response) => {
+  try {
+    const { orderId, fulfillmentId, status, lineItems, tracking } = req.body;
+
+    if (!orderId || !fulfillmentId || !status || !lineItems) {
+      return sendError(res, 400, 'orderId, fulfillmentId, status, and lineItems are required', 'INVALID_REQUEST');
+    }
+
+    const fulfillmentStatus = mapWixFulfillmentStatusToUCP(status);
+    const eventType = getEventTypeForStatus(fulfillmentStatus);
+
+    const event = createFulfillmentEvent(
+      eventType,
+      orderId,
+      fulfillmentId,
+      fulfillmentStatus,
+      lineItems,
+      tracking
+    );
+
+    // Dispatch to all subscribed webhooks
+    const deliveries = await dispatchFulfillmentEvent(event);
+
+    logger.info('UCP: Fulfillment event simulated', {
+      eventId: event.id,
+      type: eventType,
+      deliveryCount: deliveries.length,
+    });
+
+    res.status(201).json({
+      event,
+      deliveries: deliveries.map(d => ({
+        id: d.id,
+        subscriptionId: d.subscriptionId,
+        status: d.status,
+        error: d.error,
+      })),
+    });
+  } catch (error: any) {
+    logger.error('UCP: Failed to simulate fulfillment event', { error: error.message });
+    sendError(res, 500, error.message || 'Failed to simulate event', 'FULFILLMENT_ERROR');
+  }
+});
+
+// ============================================================================
+// UCP Discounts Extension
+// ============================================================================
+
+/**
+ * Apply a coupon code to checkout
+ * POST /ucp/checkout/:checkoutId/coupons
+ * 
+ * Body: { code: string }
+ */
+router.post('/ucp/checkout/:checkoutId/coupons', async (req: Request, res: Response) => {
+  try {
+    const { checkoutId } = req.params;
+    const { code } = req.body;
+
+    if (!code || typeof code !== 'string' || code.trim().length === 0) {
+      return sendError(res, 400, 'Coupon code is required', 'INVALID_REQUEST');
+    }
+
+    logger.info('UCP: Applying coupon', { checkoutId, code });
+
+    const result = await applyCouponToCheckout(code.trim(), checkoutId);
+
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+
+    res.json(result);
+  } catch (error: any) {
+    logger.error('UCP: Failed to apply coupon', { 
+      checkoutId: req.params.checkoutId,
+      error: error.message,
+    });
+    sendError(res, 500, error.message || 'Failed to apply coupon', 'DISCOUNT_ERROR');
+  }
+});
+
+/**
+ * Remove coupon from checkout
+ * DELETE /ucp/checkout/:checkoutId/coupons
+ */
+router.delete('/ucp/checkout/:checkoutId/coupons', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { checkoutId } = req.params;
+
+    logger.info('UCP: Removing coupon', { checkoutId });
+
+    const result = await removeCouponFromCheckout(checkoutId);
+
+    if (!result.success) {
+      res.status(400).json(result);
+      return;
+    }
+
+    res.json(result);
+  } catch (error: any) {
+    logger.error('UCP: Failed to remove coupon', { 
+      checkoutId: req.params.checkoutId,
+      error: error.message,
+    });
+    sendError(res, 500, error.message || 'Failed to remove coupon', 'DISCOUNT_ERROR');
+  }
+});
+
+/**
+ * Get applied discounts for checkout
+ * GET /ucp/checkout/:checkoutId/discounts
+ */
+router.get('/ucp/checkout/:checkoutId/discounts', async (req: Request, res: Response) => {
+  try {
+    const { checkoutId } = req.params;
+
+    logger.info('UCP: Getting checkout discounts', { checkoutId });
+
+    const discounts = await getCheckoutDiscounts(checkoutId);
+
+    res.json({ checkoutId, discounts });
+  } catch (error: any) {
+    logger.error('UCP: Failed to get discounts', { 
+      checkoutId: req.params.checkoutId,
+      error: error.message,
+    });
+    
+    if (error.message?.includes('not found')) {
+      return sendError(res, 404, 'Checkout not found', 'CHECKOUT_NOT_FOUND');
+    }
+    sendError(res, 500, error.message || 'Failed to get discounts', 'DISCOUNT_ERROR');
+  }
 });
 
 export default router;

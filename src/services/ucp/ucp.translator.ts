@@ -12,7 +12,10 @@ import {
   UCPCartItem,
   UCPOrder,
   UCPOrderStatus,
+  UCPPaymentStatus,
+  UCPFulfillmentStatus,
   UCPOrderItem,
+  UCPFulfillment,
 } from './ucp.types.js';
 
 // Import Wix types (we'll use 'any' for flexibility as Wix API responses can vary)
@@ -182,7 +185,7 @@ export function wixOrderToUCP(wixOrder: any): UCPOrder {
   const items: UCPOrderItem[] = (wixOrder.lineItems || []).map((item: any) => ({
     id: item.id || item._id,
     productId: item.catalogReference?.catalogItemId || item.productId,
-    name: item.productName?.original || item.name || 'Unknown Product',
+    name: item.productName?.original || item.productName?.translated || item.name || 'Unknown Product',
     price: {
       amount: parseFloat(item.price?.amount) || item.price || 0,
       currency,
@@ -193,11 +196,31 @@ export function wixOrderToUCP(wixOrder: any): UCPOrder {
       url: item.image.url,
       alt: item.image.altText,
     } : undefined,
+    fulfilledQuantity: item.fulfilledQuantity || 0,
+  }));
+
+  // Map fulfillments
+  const fulfillments: UCPFulfillment[] = (wixOrder.fulfillments || []).map((f: any) => ({
+    id: f._id || f.id,
+    status: f.status?.toLowerCase() === 'delivered' ? 'delivered' : 'shipped',
+    items: (f.lineItems || []).map((li: any) => ({
+      lineItemId: li.id || li._id || li.lineItemId,
+      quantity: li.quantity || 0,
+    })),
+    tracking: f.trackingInfo ? {
+      carrier: f.trackingInfo.shippingProvider || f.trackingInfo.carrier,
+      trackingNumber: f.trackingInfo.trackingNumber,
+      trackingUrl: f.trackingInfo.trackingLink || f.trackingInfo.trackingUrl,
+    } : undefined,
+    createdAt: f._createdDate || f.createdAt || new Date().toISOString(),
   }));
 
   return {
-    id: wixOrder.id || wixOrder._id || wixOrder.number,
+    id: wixOrder.id || wixOrder._id,
+    number: wixOrder.number,
     status: mapWixOrderStatus(wixOrder.status || wixOrder.fulfillmentStatus),
+    paymentStatus: mapWixPaymentStatus(wixOrder.paymentStatus),
+    fulfillmentStatus: mapWixFulfillmentStatus(wixOrder.fulfillmentStatus),
     items,
     totals: {
       subtotal: {
@@ -215,6 +238,11 @@ export function wixOrderToUCP(wixOrder: any): UCPOrder {
         currency,
         formatted: wixOrder.priceSummary?.shipping?.formattedAmount || '$0.00',
       },
+      discount: wixOrder.priceSummary?.discount ? {
+        amount: parseFloat(wixOrder.priceSummary.discount.amount) || 0,
+        currency,
+        formatted: wixOrder.priceSummary.discount.formattedAmount || '$0.00',
+      } : undefined,
       total: {
         amount: parseFloat(wixOrder.priceSummary?.total?.amount) || 0,
         currency,
@@ -238,6 +266,7 @@ export function wixOrderToUCP(wixOrder: any): UCPOrder {
       lastName: wixOrder.buyerInfo.lastName,
       phone: wixOrder.buyerInfo.phone,
     } : undefined,
+    fulfillments: fulfillments.length > 0 ? fulfillments : undefined,
     createdAt: wixOrder.createdDate || wixOrder._createdDate || new Date().toISOString(),
     updatedAt: wixOrder.updatedDate || wixOrder._updatedDate || new Date().toISOString(),
   };
@@ -261,6 +290,34 @@ function mapWixOrderStatus(wixStatus: string): UCPOrderStatus {
   };
 
   return statusMap[wixStatus?.toUpperCase()] || 'pending';
+}
+
+/**
+ * Map Wix payment status to UCP payment status
+ */
+function mapWixPaymentStatus(wixStatus: string): UCPPaymentStatus {
+  const statusMap: Record<string, UCPPaymentStatus> = {
+    'NOT_PAID': 'pending',
+    'PENDING': 'pending',
+    'PAID': 'paid',
+    'PARTIALLY_REFUNDED': 'refunded',
+    'FULLY_REFUNDED': 'refunded',
+  };
+
+  return statusMap[wixStatus?.toUpperCase()] || 'pending';
+}
+
+/**
+ * Map Wix fulfillment status to UCP fulfillment status
+ */
+function mapWixFulfillmentStatus(wixStatus: string): UCPFulfillmentStatus {
+  const statusMap: Record<string, UCPFulfillmentStatus> = {
+    'NOT_FULFILLED': 'unfulfilled',
+    'PARTIALLY_FULFILLED': 'partially_fulfilled',
+    'FULFILLED': 'fulfilled',
+  };
+
+  return statusMap[wixStatus?.toUpperCase()] || 'unfulfilled';
 }
 
 /**

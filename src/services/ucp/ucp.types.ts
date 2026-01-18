@@ -44,6 +44,8 @@ export type UCPCapability =
   | 'cart_management' 
   | 'checkout'
   | 'orders'
+  | 'fulfillment'
+  | 'discounts'
   // Legacy aliases for backward compatibility
   | 'browse' 
   | 'search' 
@@ -195,12 +197,16 @@ export interface UCPCreateCheckoutRequest {
  */
 export interface UCPOrder {
   id: string;
+  number?: string;
   status: UCPOrderStatus;
+  paymentStatus: UCPPaymentStatus;
+  fulfillmentStatus: UCPFulfillmentStatus;
   items: UCPOrderItem[];
   totals: UCPOrderTotals;
   shippingAddress?: UCPAddress;
   billingAddress?: UCPAddress;
   customer?: UCPCustomer;
+  fulfillments?: UCPFulfillment[];
   createdAt: string;
   updatedAt: string;
 }
@@ -214,6 +220,17 @@ export type UCPOrderStatus =
   | 'cancelled'
   | 'refunded';
 
+export type UCPPaymentStatus = 
+  | 'pending'
+  | 'paid'
+  | 'refunded'
+  | 'failed';
+
+export type UCPFulfillmentStatus = 
+  | 'unfulfilled'
+  | 'partially_fulfilled'
+  | 'fulfilled';
+
 export interface UCPOrderItem {
   id: string;
   productId: string;
@@ -221,6 +238,7 @@ export interface UCPOrderItem {
   price: UCPPrice;
   quantity: number;
   image?: UCPImage;
+  fulfilledQuantity?: number;
 }
 
 export interface UCPOrderTotals {
@@ -229,6 +247,25 @@ export interface UCPOrderTotals {
   shipping: UCPPrice;
   discount?: UCPPrice;
   total: UCPPrice;
+}
+
+export interface UCPFulfillment {
+  id: string;
+  status: 'pending' | 'shipped' | 'delivered';
+  items: { lineItemId: string; quantity: number }[];
+  tracking?: UCPTrackingInfo;
+  createdAt: string;
+}
+
+export interface UCPTrackingInfo {
+  carrier: string;
+  trackingNumber: string;
+  trackingUrl?: string;
+}
+
+export interface UCPOrdersListResponse {
+  orders: UCPOrder[];
+  pagination: UCPPagination;
 }
 
 export interface UCPAddress {
