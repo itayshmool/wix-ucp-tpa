@@ -53,6 +53,11 @@ import {
   cancelInstrument,
 } from '../services/payment/payment.service.js';
 import { MintInstrumentRequestSchema } from '../services/payment/payment.types.js';
+import {
+  completeCheckout,
+  setCheckoutState,
+} from '../services/checkout/complete-checkout.service.js';
+import { CompleteCheckoutRequestSchema } from '../services/checkout/complete-checkout.types.js';
 import { logger } from '../utils/logger.js';
 import { config } from '../config/env.js';
 
@@ -91,7 +96,7 @@ router.get('/.well-known/ucp', (_req: Request, res: Response) => {
       currency: 'USD',
       verified: true,
     },
-    capabilities: ['catalog_search', 'product_details', 'cart_management', 'checkout', 'orders', 'fulfillment', 'discounts', 'payment_handlers'],
+    capabilities: ['catalog_search', 'product_details', 'cart_management', 'checkout', 'orders', 'fulfillment', 'discounts', 'payment_handlers', 'server_checkout'],
     endpoints: {
       catalog: `${baseUrl}/ucp/products`,
       product: `${baseUrl}/ucp/products/{id}`,
@@ -1339,6 +1344,147 @@ router.post('/ucp/test/mint', async (req: Request, res: Response): Promise<void>
   } catch (error: any) {
     logger.error('UCP: Test mint failed', { error: error.message });
     sendError(res, 500, error.message || 'Test mint failed', 'MINT_ERROR');
+  }
+});
+
+// ============================================================================
+// UCP Complete Checkout (Phase 12)
+// ============================================================================
+
+/**
+ * Complete a checkout using a minted payment instrument
+ * POST /ucp/checkout/:checkoutId/complete
+ * 
+ * This enables server-side checkout completion without redirect.
+ * 
+ * Body: {
+ *   instrumentId: string,      // Required: minted instrument ID
+ *   billingAddress?: object,   // Optional billing address
+ *   shippingAddress?: object,  // Optional shipping address
+ *   buyerNote?: string,        // Optional note
+ *   idempotencyKey?: string    // Optional idempotency key
+ * }
+ * 
+ * Returns the created order on success.
+ */
+router.post('/ucp/checkout/:checkoutId/complete', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { checkoutId } = req.params;
+    
+    // Validate request body
+    const parseResult = CompleteCheckoutRequestSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      res.status(400).json({
+        error: 'Validation Error',
+        message: 'Invalid complete checkout request',
+        code: 'VALIDATION_ERROR',
+        details: parseResult.error.errors.map(e => ({
+          field: e.path.join('.'),
+          message: e.message,
+        })),
+      });
+      return;
+    }
+
+    logger.info('UCP: Completing checkout', {
+      checkoutId,
+      instrumentId: parseResult.data.instrumentId,
+    });
+
+    const result = await completeCheckout(checkoutId, parseResult.data);
+
+    if (!result.success) {
+      res.status(400).json({
+        success: false,
+        error: result.error,
+        errorCode: result.errorCode,
+      });
+      return;
+    }
+
+    res.status(200).json(result);
+  } catch (error: any) {
+    logger.error('UCP: Failed to complete checkout', {
+      checkoutId: req.params.checkoutId,
+      error: error.message,
+    });
+    sendError(res, 500, error.message || 'Failed to complete checkout', 'CHECKOUT_ERROR');
+  }
+});
+
+/**
+ * Test endpoint: Complete checkout flow
+ * POST /ucp/test/complete-checkout
+ * 
+ * Creates a test checkout, mints an instrument, and completes the checkout
+ * in one call. For testing purposes only.
+ */
+router.post('/ucp/test/complete-checkout', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { 
+      amount = 25.99, 
+      currency = 'USD',
+      cardNumber = '4242424242424242',
+    } = req.body;
+
+    logger.info('UCP: Test complete checkout flow', { amount, currency });
+
+    // 1. Create a test checkout state
+    const checkoutId = `test-checkout-${Date.now()}`;
+    setCheckoutState(checkoutId, {
+      id: checkoutId,
+      status: 'created',
+      items: [
+        { productId: 'test-product', name: 'Test Product', quantity: 1, price: amount }
+      ],
+      totals: { subtotal: amount, total: amount },
+      currency,
+      createdAt: new Date(),
+    });
+
+    // 2. Mint an instrument
+    const mintResult = await mintInstrument(checkoutId, {
+      handlerId: 'com.ucp.sandbox',
+      amount,
+      currency,
+      paymentData: { cardNumber },
+    });
+
+    if (!mintResult.success || !mintResult.instrument) {
+      res.status(400).json({
+        success: false,
+        step: 'mint',
+        error: mintResult.error,
+        errorCode: mintResult.errorCode,
+      });
+      return;
+    }
+
+    // 3. Complete the checkout
+    const completeResult = await completeCheckout(checkoutId, {
+      instrumentId: mintResult.instrument.id,
+    });
+
+    if (!completeResult.success) {
+      res.status(400).json({
+        success: false,
+        step: 'complete',
+        error: completeResult.error,
+        errorCode: completeResult.errorCode,
+      });
+      return;
+    }
+
+    res.status(200).json({
+      success: true,
+      checkoutId,
+      instrument: mintResult.instrument,
+      order: completeResult.order,
+      transaction: completeResult.transaction,
+    });
+  } catch (error: any) {
+    logger.error('UCP: Test complete checkout failed', { error: error.message });
+    sendError(res, 500, error.message || 'Test complete checkout failed', 'CHECKOUT_ERROR');
   }
 });
 
