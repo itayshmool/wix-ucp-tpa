@@ -268,7 +268,7 @@ curl -X POST https://wix-ucp-tpa.onrender.com/ucp/test/complete-checkout \
 
 | Category | Enhancements |
 |----------|--------------|
-| **Payments** | Stripe, PayPal, Apple/Google Pay |
+| **Payments** | Additional Wix payment methods |
 | **Security** | 3D Secure, Fraud detection, Rate limiting |
 | **Protocol** | Subscriptions, Multi-merchant, Cross-border |
 

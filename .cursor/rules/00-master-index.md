@@ -250,8 +250,4 @@ LOG_LEVEL=info
 METRICS_ENABLED=true
 
 # Phase 11: Payment Handlers (optional)
-GOOGLE_PAY_MERCHANT_ID=xxx
-GOOGLE_PAY_MERCHANT_NAME=Pop Stop
-STRIPE_SECRET_KEY=sk_test_xxx
-STRIPE_PUBLISHABLE_KEY=pk_test_xxx
 ```
