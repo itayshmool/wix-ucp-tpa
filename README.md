@@ -1,113 +1,292 @@
 # Wix UCP TPA
 
-A Wix Third-Party Application with Universal Commerce Protocol integration for AI-powered commerce.
+A Wix Third-Party Application implementing the **Universal Commerce Protocol (UCP)** for AI-powered commerce.
 
-## 🚨 Critical Documentation
-
-**⚠️ READ FIRST**: [.cursor/rules/CRITICAL-ARCHITECTURE.md](./.cursor/rules/CRITICAL-ARCHITECTURE.md)
-
-This document explains:
-- **The real architecture**: AI-first commerce via LLM agents + UCP protocol
-- **Who the users are**: Buyers (via AI) are primary, merchants are secondary
-- **Why authentication was confusing**: Two different flows for two different users
-- **What to focus on next**: Phase 3 (Checkout) → Phase 4-6 (UCP endpoints)
+> **Enable LLM agents like Gemini, ChatGPT, and Alexa to complete purchases on your Wix store**
 
 ---
 
-## Status
+## 🎯 What This Is
 
-✅ **Phase 3.1-3.2 Complete** - Cart & Checkout Integration
+This project connects Wix eCommerce to the [UCP Protocol](https://ucpprotocol.io), allowing AI assistants to:
 
-- ✅ Phase 1: OAuth, Webhooks, Dashboard
-- ✅ Phase 2: Products, Orders, Inventory APIs
-- ✅ Phase 3.1: Cart Management (create, update, delete carts)
-- ✅ Phase 3.2: Checkout & Hosted Checkout URL Generation
-- 🎯 **LLM agents can now complete purchases!**
+- Browse products with semantic search
+- Manage shopping carts
+- Complete checkouts
+- Track orders and fulfillment
+- Apply discounts and coupons
+- Handle payments (sandbox and production)
 
-### Recent Additions (v0.3.0)
+---
 
-- Cart creation and management APIs
-- Checkout generation from carts
-- **Wix hosted checkout URL generation** (critical feature)
-- **Quick checkout endpoint** - One-call cart + checkout + URL
-- Checkout status polling for payment confirmation
-- Pre-fill buyer info and shipping address
-- Full TypeScript implementation with strict typing
+## ✅ Implementation Status
 
-## Tech Stack
+**All 14 Phases Complete** | 176 Tests Passing
 
-- Node.js 20+
-- TypeScript 5+
-- Express.js
-- Zod for validation
+| Phase | Name | Status |
+|-------|------|--------|
+| 1 | Foundation (OAuth, Webhooks) | ✅ |
+| 2 | Wix eCommerce (Products, Orders) | ✅ |
+| 3 | Checkout Flow | ✅ |
+| 4 | UCP Discovery & Profile | ✅ |
+| 5 | UCP Capabilities | ✅ |
+| 6 | Production Deployment | ✅ |
+| 7 | UCP Orders Extension | ✅ |
+| 8 | Schema Validation (Zod) | ✅ |
+| 9 | Fulfillment & Webhooks | ✅ |
+| 10 | Discounts & Coupons | ✅ |
+| 11 | Payment Handlers | ✅ |
+| 12 | Server-Side Checkout | ✅ |
+| 13 | Protocol Bindings (MCP + A2A) | ✅ |
+| 14 | Identity & Consent (GDPR) | ✅ |
 
-## Local Development
+---
+
+## 🚀 Quick Start
 
 ```bash
-# Install dependencies
+# Install
 npm install
 
-# Copy environment variables
+# Configure
 cp .env.example .env
+# Edit .env with your Wix credentials
 
-# Run in development mode
+# Run
 npm run dev
 
-# Build for production
-npm run build
-
-# Run production build
-npm start
+# Test
+npm test
 ```
 
-## Deployment
+---
 
-Deployed on Render.com using the `render.yaml` configuration.
+## 📡 UCP Endpoints
 
-### Endpoints
+### Discovery
+```
+GET  /ucp                          # Protocol discovery
+```
 
-#### Health Checks
-- `GET /health` - Full health status
-- `GET /health/live` - Liveness probe
-- `GET /health/ready` - Readiness probe
+### Catalog
+```
+GET  /ucp/products                 # Search products
+GET  /ucp/products/:id             # Product details
+```
 
-#### OAuth & Installation
-- `GET /auth/install` - App installation endpoint
-- `GET /auth/callback` - OAuth callback
-- `GET /auth/status` - Check instance authentication status
+### Cart
+```
+POST /ucp/cart                     # Create cart
+GET  /ucp/cart/:id                 # Get cart
+PUT  /ucp/cart/items/:itemId       # Update item
+DELETE /ucp/cart/items/:itemId     # Remove item
+```
 
-#### Webhooks
-- `POST /webhooks` - Webhook receiver (with signature validation)
-- `GET /webhooks/health` - Webhook endpoint health check
+### Checkout
+```
+POST /ucp/checkout                 # Create checkout
+GET  /ucp/checkout/:id             # Get checkout
+POST /ucp/checkout/:id/coupons     # Apply coupon
+DELETE /ucp/checkout/:id/coupons   # Remove coupon
+GET  /ucp/checkout/:id/discounts   # Get discounts
+POST /ucp/checkout/:id/complete    # Complete (server-side)
+```
 
-#### Dashboard
-- `GET /dashboard` - Merchant dashboard
-- `GET /dashboard/instances` - List all connected instances
-- `GET /dashboard/instance/:id` - Get instance details
+### Orders
+```
+GET  /ucp/orders                   # List orders
+GET  /ucp/orders/:id               # Get order
+GET  /ucp/orders/:id/fulfillments  # Get fulfillments
+GET  /ucp/orders/:id/events        # Fulfillment events
+```
 
-## Environment Variables
+### Payments
+```
+GET  /ucp/payment-handlers         # List handlers
+GET  /ucp/payment-handlers/:id     # Handler details
+POST /ucp/checkout/:id/mint        # Mint instrument
+GET  /ucp/instruments/:id          # Get instrument
+POST /ucp/instruments/:id/validate # Validate
+DELETE /ucp/instruments/:id        # Cancel
+```
 
-Required environment variables:
+### Webhooks
+```
+POST /ucp/webhooks                 # Register
+GET  /ucp/webhooks                 # List
+GET  /ucp/webhooks/:id             # Get
+DELETE /ucp/webhooks/:id           # Unregister
+```
+
+### Identity & Consent
+```
+POST /ucp/identity/link            # Link identity
+GET  /ucp/identity/:platform/:id   # Get identity
+DELETE /ucp/identity/:platform/:id # Delete identity
+POST /ucp/consent                  # Grant consent
+GET  /ucp/consent/:email           # Get consent
+DELETE /ucp/consent/:email/:type   # Revoke consent
+GET  /ucp/gdpr/export/:email       # Export data
+POST /ucp/gdpr/delete              # Delete data
+```
+
+---
+
+## 🔌 Protocol Bindings
+
+### MCP (Model Context Protocol)
+```
+GET  /mcp/tools                    # List tools
+POST /mcp/call                     # Execute tool
+```
+
+Exposes all UCP operations as MCP tools for AI frameworks.
+
+### A2A (Agent-to-Agent)
+```
+GET  /a2a/agent                    # Agent card
+POST /a2a/handoff                  # Create handoff
+POST /a2a/handoff/:id/accept       # Accept
+POST /a2a/handoff/:id/complete     # Complete
+DELETE /a2a/handoff/:id            # Cancel
+GET  /a2a/handoffs                 # List handoffs
+GET  /a2a/stats                    # Statistics
+```
+
+Enables multi-agent transaction coordination.
+
+---
+
+## 🧪 Testing
+
+```bash
+# Run all tests
+npm test
+
+# Watch mode
+npm run test:watch
+
+# Coverage
+npm run test:coverage
+```
+
+**Test Coverage**: 176 tests across 8 test files
+
+| Test File | Coverage |
+|-----------|----------|
+| `ucp-endpoints.test.ts` | Core UCP |
+| `ucp-phase7-10.test.ts` | Orders, Validation, Fulfillment, Discounts |
+| `ucp-phase11-payment.test.ts` | Payment handlers |
+| `ucp-phase12-complete.test.ts` | Server-side checkout |
+| `ucp-phase13-bindings.test.ts` | MCP + A2A |
+| `ucp-phase14-identity.test.ts` | Identity & GDPR |
+| `intent-detection.test.ts` | LLM intent parsing |
+
+---
+
+## 🏗️ Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    LLM Platform                         │
+│              (Gemini, ChatGPT, Alexa)                   │
+└────────────────────────┬────────────────────────────────┘
+                         │ UCP Protocol
+                         ▼
+┌─────────────────────────────────────────────────────────┐
+│                   Wix UCP TPA                           │
+│  ┌─────────────┐  ┌──────────────┐  ┌───────────────┐  │
+│  │  UCP Routes │  │ MCP Binding  │  │  A2A Binding  │  │
+│  └──────┬──────┘  └──────┬───────┘  └───────┬───────┘  │
+│         │                │                   │          │
+│  ┌──────▼────────────────▼───────────────────▼───────┐ │
+│  │                   Services                         │ │
+│  │  Products │ Cart │ Checkout │ Orders │ Payment    │ │
+│  │  Fulfillment │ Discount │ Identity │ Consent      │ │
+│  └──────────────────────┬────────────────────────────┘ │
+└─────────────────────────┼───────────────────────────────┘
+                          │ Wix SDK
+                          ▼
+┌─────────────────────────────────────────────────────────┐
+│                    Wix Platform                         │
+│           (eCommerce, Payments, CRM)                    │
+└─────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 🔧 Environment Variables
 
 ```bash
 # Server
 PORT=3000
 NODE_ENV=development
-LOG_LEVEL=info
 
-# Wix App Configuration
-WIX_APP_ID=your-app-id              # From Wix Developer Console
-WIX_APP_SECRET=your-app-secret      # From Wix Developer Console
-WIX_WEBHOOK_PUBLIC_KEY=your-key     # For webhook signature validation
-BASE_URL=http://localhost:3000      # Your app's public URL
+# Wix App (from Wix Developer Console)
+WIX_APP_ID=your-app-id
+WIX_APP_SECRET=your-app-secret
+WIX_WEBHOOK_PUBLIC_KEY=your-webhook-key
+BASE_URL=https://your-domain.com
 ```
 
-See `.env.example` for a template.
+---
 
-## Architecture
+## 📚 Documentation
 
-See `.cursor/rules/` for complete implementation guides.
+| Document | Description |
+|----------|-------------|
+| [QUICKSTART.md](./QUICKSTART.md) | Get started in 5 minutes |
+| [docs/README.md](./docs/README.md) | Documentation index |
+| [docs/decks/](./docs/decks/) | Presentation decks |
+| [docs/guides/](./docs/guides/) | Implementation guides |
+| [.cursor/rules/](./cursor/rules/) | Development rules |
 
-## License
+---
+
+## 🚢 Deployment
+
+Deployed on **Render.com** with `render.yaml`.
+
+```bash
+# Build
+npm run build
+
+# Start production
+npm start
+```
+
+Live URL: `https://wix-ucp-tpa.onrender.com`
+
+---
+
+## 🤝 UCP Protocol Compliance
+
+This implementation follows the [UCP Specification](https://ucpprotocol.io):
+
+| Capability | Implemented |
+|------------|:-----------:|
+| Discovery (`/ucp`) | ✅ |
+| Catalog Search | ✅ |
+| Product Details | ✅ |
+| Cart Management | ✅ |
+| Checkout Creation | ✅ |
+| Server-Side Checkout | ✅ |
+| Orders & Fulfillment | ✅ |
+| Discounts & Coupons | ✅ |
+| Payment Handlers | ✅ |
+| Webhooks | ✅ |
+| Identity Linking | ✅ |
+| Consent Management | ✅ |
+| GDPR Compliance | ✅ |
+| MCP Binding | ✅ |
+| A2A Binding | ✅ |
+
+---
+
+## 📄 License
 
 MIT
+
+---
+
+*Built for AI-first commerce* 🤖🛒
